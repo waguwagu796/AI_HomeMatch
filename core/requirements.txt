@@ -1,0 +1,6 @@
+ipykernel
+pytesseract
+pillow
+pymupdf
+pymysql
+python-dotenv
