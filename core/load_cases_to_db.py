@@ -26,7 +26,7 @@ def get_db_conn():
         host=os.environ["DB_HOST"],
         port=int(os.environ.get("DB_PORT", 3306)),
         user=os.environ["DB_USER"],
-        password=os.environ["DB_PASS"],
+        password=os.environ["DB_PASSWORD"],
         database=os.environ["DB_NAME"],
         charset="utf8mb4",
         autocommit=False,
