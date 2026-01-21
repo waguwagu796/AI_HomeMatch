@@ -5,6 +5,9 @@ import com.homematch.domain.auth.dto.SignupRequest;
 import com.homematch.domain.user.UserService;
 
 import lombok.RequiredArgsConstructor;
+
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,14 +21,16 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        loginService.login(request);
-        return ResponseEntity.ok().build();
+        System.out.println(">>> 로그인 요청 이메일: " + request.getEmail()); // 이 로그가 찍히는지 확인
+        String token = loginService.login(request);
+        return ResponseEntity.ok(Map.of("accessToken", token));
     }
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
         return ResponseEntity.ok().build();
     }
+
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
