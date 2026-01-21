@@ -9,6 +9,8 @@ const Signup = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [nickname, setNickname] = useState("");
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
+  const [marketingAgreed, setMarketingAgreed] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -17,6 +19,11 @@ const Signup = () => {
 
     if (password !== confirmPassword) {
       setError("비밀번호가 일치하지 않습니다.");
+      return;
+    }
+
+    if (!privacyAgreed) {
+      setError("개인정보 이용 약관에 동의해주세요.");
       return;
     }
 
@@ -31,6 +38,8 @@ const Signup = () => {
           password,
           name,
           nickname,
+          privacyAgreed,
+          marketingAgreed,
         }),
       });
 
@@ -42,6 +51,7 @@ const Signup = () => {
       navigate("/login");
     } catch (err) {
       setError("회원가입 중 오류가 발생했습니다.");
+      console.error("로그인 에러:", err);
     }
   };
 
@@ -49,9 +59,8 @@ const Signup = () => {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-8 rounded shadow-md w-96"
+        className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md"
       >
-      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
             <div className="w-12 h-12 bg-primary-600 rounded flex items-center justify-center">
@@ -131,6 +140,35 @@ const Signup = () => {
                 required
               />
             </div>
+            
+            <div className="space-y-3 pt-2">
+              <div className="flex items-start">
+                <input
+                  type="checkbox"
+                  id="privacyAgreed"
+                  checked={privacyAgreed}
+                  onChange={(e) => setPrivacyAgreed(e.target.checked)}
+                  className="mt-1 mr-2 w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                  required
+                />
+                <label htmlFor="privacyAgreed" className="text-sm text-gray-700">
+                  <span className="text-primary-600 font-medium">[필수]</span> 개인정보 이용 약관에 동의합니다.
+                </label>
+              </div>
+              <div className="flex items-start">
+                <input
+                  type="checkbox"
+                  id="marketingAgreed"
+                  checked={marketingAgreed}
+                  onChange={(e) => setMarketingAgreed(e.target.checked)}
+                  className="mt-1 mr-2 w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                />
+                <label htmlFor="marketingAgreed" className="text-sm text-gray-700">
+                  <span className="text-gray-500">[선택]</span> 마케팅 정보 수신에 동의합니다.
+                </label>
+              </div>
+            </div>
+
             <button 
               type="submit" 
               className="w-full bg-primary-600 text-white py-3 rounded-lg hover:bg-primary-700 font-medium"
@@ -141,12 +179,8 @@ const Signup = () => {
 
         </div>
 
-        <p className="mt-6 text-xs text-center text-gray-500">
-          로그인 또는 회원가입을 통해 HomeMatch의 이용 약관 및 개인정보 처리 방침에 동의하게 됩니다.
-        </p>
         {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
 
-        </div>
       </form>
     </div>
   );
