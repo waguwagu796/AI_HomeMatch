@@ -16,3 +16,7 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MariaDBDialect
+
+jwt:
+  secret: my-super-secret-key-my-super-secret-key
+  expiration: 3600000 # 1시간 (ms)
