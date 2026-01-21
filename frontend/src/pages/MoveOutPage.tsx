@@ -2,7 +2,7 @@ import { Download, Info, FileText, Scale } from 'lucide-react'
 
 export default function MoveOutPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">퇴실 & 분쟁 예방</h1>
       </div>
@@ -38,43 +38,75 @@ export default function MoveOutPage() {
       </div>
 
       {/* Move-out Preparation */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">퇴실 준비</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          원상복구 체크리스트를 확인하고, 분쟁이 자주 발생하는 항목을 미리 관리하세요.
-        </p>
-        
-        <div className="space-y-4">
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h3 className="font-bold text-gray-900 mb-3">원상복구 체크리스트</h3>
-            <div className="space-y-2">
-              {[
-                '바닥재 오염 및 파손 점검',
-                '붙박이 가구(장롱, 수납장) 기능 점검',
-                '창문 및 문들 파손 여부 확인',
-                '벽지 손상 여부 확인 및 수리',
-              ].map((item, idx) => (
-                <label key={idx} className="flex items-center">
-                  <input type="checkbox" className="mr-3" />
-                  <span className="text-sm text-gray-700">{item}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+<div className="bg-white border border-gray-200 rounded-lg p-6">
+  <h2 className="text-xl font-bold text-gray-900 mb-2">퇴실 준비</h2>
+  <p className="text-sm text-gray-600 mb-6">
+    퇴실 전 필수 절차와 원상복구 상태를 함께 점검하세요.
+  </p>
 
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h3 className="font-bold text-gray-900 mb-3">분쟁 빈번 항목</h3>
-            <div className="space-y-2">
-              {['도배/장판 손상', '주방 설비 하자', '벽걸이 TV/액자 흔적'].map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 border border-gray-200 rounded">
-                  <span className="text-sm text-gray-700">{item}</span>
-                  <Info className="w-4 h-4 text-gray-400" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+  <div className="grid md:grid-cols-2 gap-6">
+    {/* LEFT – 퇴실 체크리스트 */}
+    <div className="border border-gray-200 rounded-lg p-4">
+      <h3 className="font-bold text-gray-900 mb-4">퇴실 체크리스트</h3>
+      <div className="space-y-3">
+        {[
+          '전기 요금 해지 및 정산',
+          '가스 요금 해지 및 정산',
+          '수도 요금 정산',
+          '인터넷 / TV 해지',
+          '열쇠 반납 및 도어락 초기화',
+        ].map((item, idx) => (
+          <label
+            key={idx}
+            className="flex items-center justify-between border border-gray-200 rounded p-3"
+          >
+            <span className="text-sm text-gray-700">{item}</span>
+            <input type="checkbox" />
+          </label>
+        ))}
       </div>
+    </div>
+
+    {/* RIGHT – 원상복구 체크리스트 */}
+    <div className="border border-gray-200 rounded-lg p-4">
+      <h3 className="font-bold text-gray-900 mb-4">원상복구 체크리스트</h3>
+      <div className="space-y-3">
+        {[
+          '바닥재 오염 및 파손 점검',
+          '붙박이 가구 기능 점검',
+          '창문 및 문 파손 여부',
+          '벽지 손상 여부 확인',
+        ].map((item, idx) => (
+          <label
+            key={idx}
+            className="flex items-center justify-between border border-gray-200 rounded p-3"
+          >
+            <span className="text-sm text-gray-700">{item}</span>
+            <input type="checkbox" />
+          </label>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  {/* 분쟁 빈번 항목 */}
+  <div className="border border-gray-200 rounded-lg p-4 mt-6">
+    <h3 className="font-bold text-gray-900 mb-3">분쟁 빈번 항목</h3>
+    <div className="space-y-2">
+      {['도배/장판 손상', '주방 설비 하자', '벽걸이 TV/액자 흔적'].map((item, idx) => (
+        <div
+          key={idx}
+          className="flex items-center justify-between p-2 border border-gray-200 rounded"
+        >
+          <span className="text-sm text-gray-700">{item}</span>
+          <Info className="w-4 h-4 text-gray-400" />
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
+
+      
 
       {/* Deposit Management */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">
