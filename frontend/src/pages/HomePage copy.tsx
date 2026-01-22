@@ -17,7 +17,7 @@ export default function HomePage() {
           <p className="text-xl text-gray-600">
             계약서를 업로드하면 AI가 5분 안에 위험 요소를 분석해드려요
           </p>
-        </div>
+        </div> 
 
         {/* 메인 CTA - 계약서 검증 */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
