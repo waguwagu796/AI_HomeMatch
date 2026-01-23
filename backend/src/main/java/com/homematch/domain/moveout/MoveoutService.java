@@ -4,6 +4,7 @@ import com.homematch.domain.moveout.dto.*;
 import com.homematch.domain.user.User;
 import com.homematch.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -81,9 +82,25 @@ public class MoveoutService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public MoveoutChecklistResponse createMoveoutChecklist(Integer userNo, MoveoutChecklistRequest request) {
         User user = userRepository.findById(userNo)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        // 중복 체크: 같은 사용자, 같은 타입, 같은 항목명이 이미 있으면 생성하지 않음
+        boolean exists = moveoutChecklistRepository.existsByUser_User_noAndChecklistTypeAndItemName(
+                userNo, request.getChecklistType(), request.getItemName());
+        
+        if (exists) {
+            // 이미 존재하는 경우 기존 항목을 반환
+            List<MoveoutChecklist> existing = moveoutChecklistRepository.findByUser_User_noAndChecklistTypeOrderById(
+                    userNo, request.getChecklistType());
+            return existing.stream()
+                    .filter(c -> c.getItemName().equals(request.getItemName()))
+                    .findFirst()
+                    .map(this::toMoveoutChecklistResponse)
+                    .orElseThrow(() -> new IllegalArgumentException("체크리스트를 찾을 수 없습니다."));
+        }
 
         MoveoutChecklist checklist = MoveoutChecklist.builder()
                 .user(user)
@@ -93,8 +110,19 @@ public class MoveoutService {
                 .notes(request.getNotes())
                 .build();
 
-        MoveoutChecklist saved = moveoutChecklistRepository.save(checklist);
-        return toMoveoutChecklistResponse(saved);
+        try {
+            MoveoutChecklist saved = moveoutChecklistRepository.save(checklist);
+            return toMoveoutChecklistResponse(saved);
+        } catch (DataIntegrityViolationException e) {
+            // Unique 제약조건 위반 시 기존 항목 반환
+            List<MoveoutChecklist> existing = moveoutChecklistRepository.findByUser_User_noAndChecklistTypeOrderById(
+                    userNo, request.getChecklistType());
+            return existing.stream()
+                    .filter(c -> c.getItemName().equals(request.getItemName()))
+                    .findFirst()
+                    .map(this::toMoveoutChecklistResponse)
+                    .orElseThrow(() -> new IllegalArgumentException("체크리스트를 찾을 수 없습니다."));
+        }
     }
 
     public MoveoutChecklistResponse updateMoveoutChecklist(Integer userNo, Long id, MoveoutChecklistRequest request) {

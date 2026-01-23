@@ -9,6 +9,6 @@ import java.util.List;
 
 @Repository
 public interface DisputeRecordRepository extends JpaRepository<DisputeRecord, Long> {
-    @Query("SELECT d FROM DisputeRecord d WHERE d.user.user_no = :userNo ORDER BY d.disputeDate DESC")
+    @Query("SELECT d FROM DisputeRecord d JOIN d.user u WHERE u.user_no = :userNo ORDER BY d.disputeDate DESC")
     List<DisputeRecord> findByUser_User_noOrderByDisputeDateDesc(@Param("userNo") Integer userNo);
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Download, Info, FileText, Scale, Check, X, Calendar } from 'lucide-react'
 
 interface EntryStatusRecord {
@@ -195,6 +195,8 @@ export default function MoveOutPage() {
   const [entryStatusRecords, setEntryStatusRecords] = useState<EntryStatusRecord[]>([])
   const [moveoutChecklists, setMoveoutChecklists] = useState<MoveoutChecklist[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [isInitializing, setIsInitializing] = useState<boolean>(false)
+  const hasInitialized = useRef<boolean>(false)
   
   // API 호출 헬퍼 함수
   const getAuthHeaders = () => {
@@ -259,9 +261,23 @@ export default function MoveOutPage() {
 
   // 초기 체크리스트 생성 (없을 경우)
   const initializeChecklists = async () => {
+    // 이미 초기화했거나 초기화 중이면 중복 실행 방지
+    if (hasInitialized.current || isInitializing) {
+      return
+    }
+    
     try {
+      setIsInitializing(true)
+      hasInitialized.current = true
       const token = localStorage.getItem('accessToken')
       if (!token) return
+
+      // 먼저 현재 체크리스트를 다시 확인 (중복 생성 방지)
+      const currentChecklists = await loadChecklists()
+      if (currentChecklists && currentChecklists.length > 0) {
+        // 이미 체크리스트가 있으면 생성하지 않음
+        return
+      }
 
       const moveOutItems = [
         '전기 요금 해지 및 정산',
@@ -279,37 +295,38 @@ export default function MoveOutPage() {
         '조명·콘센트·스위치 정상 작동',
       ]
 
-      // 기존 체크리스트가 없으면 생성
-      if (moveoutChecklists.length === 0) {
-        for (const item of moveOutItems) {
-          await fetch('http://localhost:8080/api/moveout/checklists', {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({
-              checklistType: 'MOVE_OUT',
-              itemName: item,
-              isCompleted: false
-            })
+      // 체크리스트 생성 (순차적으로 실행)
+      for (const item of moveOutItems) {
+        await fetch('http://localhost:8080/api/moveout/checklists', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            checklistType: 'MOVE_OUT',
+            itemName: item,
+            isCompleted: false
           })
-        }
-
-        for (const item of restorationItems) {
-          await fetch('http://localhost:8080/api/moveout/checklists', {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({
-              checklistType: 'RESTORATION',
-              itemName: item,
-              isCompleted: false
-            })
-          })
-        }
-
-        // 생성 후 다시 불러오기
-        await loadChecklists()
+        })
       }
+
+      for (const item of restorationItems) {
+        await fetch('http://localhost:8080/api/moveout/checklists', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            checklistType: 'RESTORATION',
+            itemName: item,
+            isCompleted: false
+          })
+        })
+      }
+
+      // 생성 후 다시 불러오기
+      await loadChecklists()
     } catch (error) {
       console.error('체크리스트 초기화 실패:', error)
+      hasInitialized.current = false // 실패 시 다시 시도할 수 있도록
+    } finally {
+      setIsInitializing(false)
     }
   }
 

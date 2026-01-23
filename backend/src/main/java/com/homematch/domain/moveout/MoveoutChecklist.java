@@ -7,7 +7,15 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "moveout_checklists")
+@Table(
+    name = "moveout_checklists",
+    uniqueConstraints = {
+        @UniqueConstraint(
+            name = "uk_user_checklist_type_item",
+            columnNames = {"user_id", "checklist_type", "item_name"}
+        )
+    }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor

@@ -9,6 +9,6 @@ import java.util.List;
 
 @Repository
 public interface EntryStatusRecordRepository extends JpaRepository<EntryStatusRecord, Long> {
-    @Query("SELECT e FROM EntryStatusRecord e WHERE e.user.user_no = :userNo ORDER BY e.recordDate DESC")
+    @Query("SELECT e FROM EntryStatusRecord e JOIN e.user u WHERE u.user_no = :userNo ORDER BY e.recordDate DESC")
     List<EntryStatusRecord> findByUser_User_noOrderByRecordDateDesc(@Param("userNo") Integer userNo);
 }

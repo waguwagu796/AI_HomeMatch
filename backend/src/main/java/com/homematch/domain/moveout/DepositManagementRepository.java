@@ -10,9 +10,9 @@ import java.util.Optional;
 
 @Repository
 public interface DepositManagementRepository extends JpaRepository<DepositManagement, Long> {
-    @Query("SELECT d FROM DepositManagement d WHERE d.user.user_no = :userNo ORDER BY d.moveoutDate DESC")
+    @Query("SELECT d FROM DepositManagement d JOIN d.user u WHERE u.user_no = :userNo ORDER BY d.moveoutDate DESC")
     List<DepositManagement> findByUser_User_noOrderByMoveoutDateDesc(@Param("userNo") Integer userNo);
     
-    @Query("SELECT d FROM DepositManagement d WHERE d.user.user_no = :userNo ORDER BY d.moveoutDate DESC")
+    @Query("SELECT d FROM DepositManagement d JOIN d.user u WHERE u.user_no = :userNo ORDER BY d.moveoutDate DESC")
     Optional<DepositManagement> findFirstByUser_User_noOrderByMoveoutDateDesc(@Param("userNo") Integer userNo);
 }

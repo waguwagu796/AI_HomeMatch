@@ -9,6 +9,6 @@ import java.util.List;
 
 @Repository
 public interface MoveoutPhotoRepository extends JpaRepository<MoveoutPhoto, Long> {
-    @Query("SELECT m FROM MoveoutPhoto m WHERE m.user.user_no = :userNo ORDER BY m.takenDate DESC")
+    @Query("SELECT m FROM MoveoutPhoto m JOIN m.user u WHERE u.user_no = :userNo ORDER BY m.takenDate DESC")
     List<MoveoutPhoto> findByUser_User_noOrderByTakenDateDesc(@Param("userNo") Integer userNo);
 }
