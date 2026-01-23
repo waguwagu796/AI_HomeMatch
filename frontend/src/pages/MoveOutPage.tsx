@@ -180,11 +180,139 @@ function InfoModal({
   )
 }
 
+interface MoveoutChecklist {
+  id: number
+  checklistType: string
+  itemName: string
+  isCompleted: boolean
+  completedAt: string | null
+  notes: string | null
+}
+
 export default function MoveOutPage() {
   const [modalKey, setModalKey] = useState<string | null>(null)
   const [isScheduleGuideOpen, setIsScheduleGuideOpen] = useState<boolean>(false)
   const [entryStatusRecords, setEntryStatusRecords] = useState<EntryStatusRecord[]>([])
+  const [moveoutChecklists, setMoveoutChecklists] = useState<MoveoutChecklist[]>([])
+  const [isLoading, setIsLoading] = useState<boolean>(false)
   
+  // API 호출 헬퍼 함수
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('accessToken')
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token || ''}`
+    }
+  }
+
+  // 체크리스트 불러오기
+  const loadChecklists = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) return null
+
+      const response = await fetch('http://localhost:8080/api/moveout/checklists', {
+        headers: getAuthHeaders()
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setMoveoutChecklists(data)
+        return data
+      }
+      return null
+    } catch (error) {
+      console.error('체크리스트 불러오기 실패:', error)
+      return null
+    }
+  }
+
+  // 체크리스트 항목 업데이트 (자동 저장)
+  const updateChecklistItem = async (id: number, isCompleted: boolean) => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        alert('로그인이 필요합니다.')
+        return
+      }
+
+      setIsLoading(true)
+      const response = await fetch(`http://localhost:8080/api/moveout/checklists/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ isCompleted })
+      })
+
+      if (response.ok) {
+        // 성공 시 체크리스트 다시 불러오기
+        await loadChecklists()
+      } else {
+        alert('저장에 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('체크리스트 업데이트 실패:', error)
+      alert('저장 중 오류가 발생했습니다.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // 초기 체크리스트 생성 (없을 경우)
+  const initializeChecklists = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) return
+
+      const moveOutItems = [
+        '전기 요금 해지 및 정산',
+        '가스 요금 해지 및 정산',
+        '수도 요금 정산',
+        '인터넷 / TV 해지',
+        '열쇠 반납 및 도어락 초기화',
+      ]
+
+      const restorationItems = [
+        '바닥재 오염 및 파손 점검',
+        '붙박이 가구 기능 점검',
+        '창문 및 문 파손 여부',
+        '벽지 손상 여부 확인',
+        '조명·콘센트·스위치 정상 작동',
+      ]
+
+      // 기존 체크리스트가 없으면 생성
+      if (moveoutChecklists.length === 0) {
+        for (const item of moveOutItems) {
+          await fetch('http://localhost:8080/api/moveout/checklists', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+              checklistType: 'MOVE_OUT',
+              itemName: item,
+              isCompleted: false
+            })
+          })
+        }
+
+        for (const item of restorationItems) {
+          await fetch('http://localhost:8080/api/moveout/checklists', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+              checklistType: 'RESTORATION',
+              itemName: item,
+              isCompleted: false
+            })
+          })
+        }
+
+        // 생성 후 다시 불러오기
+        await loadChecklists()
+      }
+    } catch (error) {
+      console.error('체크리스트 초기화 실패:', error)
+    }
+  }
+
   // localStorage에서 입주 상태 기록 불러오기
   useEffect(() => {
     const savedRecords = localStorage.getItem('entryStatusRecords')
@@ -194,6 +322,19 @@ export default function MoveOutPage() {
       } catch (e) {
         console.error('Failed to parse saved entry status records:', e)
       }
+    }
+  }, [])
+
+  // 체크리스트 불러오기 및 초기화
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken')
+    if (token) {
+      loadChecklists().then((data) => {
+        // 체크리스트가 없으면 초기화
+        if (!data || data.length === 0) {
+          initializeChecklists()
+        }
+      })
     }
   }, [])
   
@@ -334,50 +475,52 @@ export default function MoveOutPage() {
             </div>
 
             <div className="space-y-3.5">
-              {[
-                '전기 요금 해지 및 정산',
-                '가스 요금 해지 및 정산',
-                '수도 요금 정산',
-                '인터넷 / TV 해지',
-                '열쇠 반납 및 도어락 초기화',
-              ].map((item, idx) => (
-                <label
-                  key={idx}
-                  className="
-                    group
-                    flex items-center justify-between
-                    rounded-lg
-                    px-4 py-3
-                    cursor-pointer
-                    transition-colors
-
-                    bg-slate-100
-                    hover:bg-indigo-200
-                    has-[:checked]:bg-indigo-200
-                  "
-                >
-                  {/* 텍스트 */}
-                  <span
-                    className="
-                      text-sm text-gray-800
-                      group-has-[:checked]:font-semibold
-                      group-has-[:checked]:text-black
-                    "
-                  >
-                    {item}
-                  </span>
-
-                  {/* 체크박스 */}
-                  <input
-                    type="checkbox"
-                    className="
-                      w-4 h-4
-                      accent-indigo-600
+              {moveoutChecklists
+                .filter(item => item.checklistType === 'MOVE_OUT')
+                .map((item) => (
+                  <label
+                    key={item.id}
+                    className={`
+                      group
+                      flex items-center justify-between
+                      rounded-lg
+                      px-4 py-3
                       cursor-pointer
-                    "
-                  />
-                </label>
-              ))}
+                      transition-colors
+                      ${item.isCompleted ? 'bg-indigo-200' : 'bg-slate-100'}
+                      hover:bg-indigo-200
+                    `}
+                  >
+                    {/* 텍스트 */}
+                    <span
+                      className={`
+                        text-sm
+                        ${item.isCompleted ? 'font-semibold text-black' : 'text-gray-800'}
+                      `}
+                    >
+                      {item.itemName}
+                    </span>
+
+                    {/* 체크박스 */}
+                    <input
+                      type="checkbox"
+                      checked={item.isCompleted}
+                      onChange={(e) => updateChecklistItem(item.id, e.target.checked)}
+                      disabled={isLoading}
+                      className="
+                        w-4 h-4
+                        accent-indigo-600
+                        cursor-pointer
+                        disabled:opacity-50
+                      "
+                    />
+                  </label>
+                ))}
+              {moveoutChecklists.filter(item => item.checklistType === 'MOVE_OUT').length === 0 && (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  체크리스트를 불러오는 중...
+                </div>
+              )}
             </div>
           </div>
 
@@ -386,50 +529,52 @@ export default function MoveOutPage() {
             <h3 className="font-bold text-gray-900 mb-4 ml-1">원상복구 체크리스트</h3>
 
             <div className="space-y-3.5">
-              {[
-                '바닥재 오염 및 파손 점검',
-                '붙박이 가구 기능 점검',
-                '창문 및 문 파손 여부',
-                '벽지 손상 여부 확인',
-                '조명·콘센트·스위치 정상 작동',
-              ].map((item, idx) => (
-                <label
-                  key={idx}
-                  className="
-                    group
-                    flex items-center justify-between
-                    rounded-lg
-                    px-4 py-3
-                    cursor-pointer
-                    transition-colors
-
-                    bg-slate-100
-                    hover:bg-indigo-200
-                    has-[:checked]:bg-indigo-200
-                  "
-                >
-                  {/* 텍스트 */}
-                  <span
-                    className="
-                      text-sm text-gray-800
-                      group-has-[:checked]:font-semibold
-                      group-has-[:checked]:text-black
-                    "
-                  >
-                    {item}
-                  </span>
-
-                  {/* 체크박스 */}
-                  <input
-                    type="checkbox"
-                    className="
-                      w-4 h-4
-                      accent-indigo-600
+              {moveoutChecklists
+                .filter(item => item.checklistType === 'RESTORATION')
+                .map((item) => (
+                  <label
+                    key={item.id}
+                    className={`
+                      group
+                      flex items-center justify-between
+                      rounded-lg
+                      px-4 py-3
                       cursor-pointer
-                    "
-                  />
-                </label>
-              ))}
+                      transition-colors
+                      ${item.isCompleted ? 'bg-indigo-200' : 'bg-slate-100'}
+                      hover:bg-indigo-200
+                    `}
+                  >
+                    {/* 텍스트 */}
+                    <span
+                      className={`
+                        text-sm
+                        ${item.isCompleted ? 'font-semibold text-black' : 'text-gray-800'}
+                      `}
+                    >
+                      {item.itemName}
+                    </span>
+
+                    {/* 체크박스 */}
+                    <input
+                      type="checkbox"
+                      checked={item.isCompleted}
+                      onChange={(e) => updateChecklistItem(item.id, e.target.checked)}
+                      disabled={isLoading}
+                      className="
+                        w-4 h-4
+                        accent-indigo-600
+                        cursor-pointer
+                        disabled:opacity-50
+                      "
+                    />
+                  </label>
+                ))}
+              {moveoutChecklists.filter(item => item.checklistType === 'RESTORATION').length === 0 && (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  체크리스트를 불러오는 중...
+                </div>
+              )}
             </div>
           </div>
         </div>

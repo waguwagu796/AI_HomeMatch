@@ -46,4 +46,9 @@ public class User {
         this.password = password;
         this.role = role;
     }
+
+    // user_no 필드에 대한 getUserNo() 메서드 추가 (Lombok이 getUser_no()를 생성하므로 수동 추가)
+    public Integer getUserNo() {
+        return this.user_no;
+    }
 }
