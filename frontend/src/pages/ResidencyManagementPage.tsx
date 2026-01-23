@@ -94,6 +94,7 @@ export default function ResidencyManagementPage() {
   const [isResidencyIssueDragging, setIsResidencyIssueDragging] = useState<boolean>(false)
   const residencyIssueFileInputRef = useRef<HTMLInputElement>(null)
   const [isIssueRecordModalOpen, setIsIssueRecordModalOpen] = useState<boolean>(false)
+  const [editingIssueId, setEditingIssueId] = useState<string | null>(null) // 수정 중인 이슈 ID
   const [issueRecordTitle, setIssueRecordTitle] = useState<string>('')
   const [issueRecordStatus, setIssueRecordStatus] = useState<'처리 중' | '접수 완료' | '처리 완료' | '거절'>('접수 완료')
 
@@ -393,6 +394,11 @@ export default function ResidencyManagementPage() {
 
       if (response.ok) {
         const data = await response.json()
+        
+        // 서버에서 최신 데이터 다시 불러오기
+        await loadCostSettings()
+        
+        // 상태 업데이트
         setHousingCost({
           rent: Number(data.rent),
           maintenance: Number(data.maintenance),
@@ -401,12 +407,45 @@ export default function ResidencyManagementPage() {
           autoRegister: data.autoRegister
         })
         
+        // tempCost도 업데이트 (다음 모달 열 때 반영)
+        setTempCost({
+          rent: Number(data.rent),
+          maintenance: Number(data.maintenance),
+          utilities: Number(data.utilities),
+          paymentDate: data.paymentDate,
+          autoRegister: data.autoRegister
+        })
+        
+        // 납부일이 변경되었으면 기존 월별 기록의 납부일도 업데이트
+        const currentDate = new Date()
+        const currentYear = currentDate.getFullYear()
+        const currentMonth = currentDate.getMonth() + 1
+        
+        // 현재 월의 기록이 있으면 납부일 업데이트
+        const currentRecord = monthlyRecords.find(
+          (r) => r.year === currentYear && r.month === currentMonth
+        )
+        
+        if (currentRecord) {
+          // 기존 기록의 납부일 업데이트
+          await fetch(`http://localhost:8080/api/residency/monthly-records`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+              year: currentYear,
+              month: currentMonth,
+              rent: currentRecord.rent,
+              maintenance: currentRecord.maintenance,
+              utilities: currentRecord.utilities,
+              paymentDate: data.paymentDate, // 업데이트된 납부일 사용
+              paid: currentRecord.paid,
+              notes: null
+            })
+          })
+        }
+        
         // 자동 등록이 활성화되어 있으면 현재 및 향후 월에 자동으로 기록 생성
         if (tempCost.autoRegister) {
-          const currentDate = new Date()
-          const currentYear = currentDate.getFullYear()
-          const currentMonth = currentDate.getMonth() + 1
-          
           // 향후 12개월까지 자동 생성
           for (let i = 0; i < 12; i++) {
             const targetDate = new Date(currentYear, currentMonth - 1 + i, 1)
@@ -418,7 +457,23 @@ export default function ResidencyManagementPage() {
               (r) => r.year === year && r.month === month
             )
             
-            if (!existingRecord) {
+            if (existingRecord) {
+              // 기존 기록이 있으면 납부일만 업데이트
+              await fetch(`http://localhost:8080/api/residency/monthly-records`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                  year,
+                  month,
+                  rent: existingRecord.rent,
+                  maintenance: existingRecord.maintenance,
+                  utilities: existingRecord.utilities,
+                  paymentDate: data.paymentDate, // 업데이트된 납부일 사용
+                  paid: existingRecord.paid,
+                  notes: null
+                })
+              })
+            } else {
               // API로 월별 기록 생성
               await fetch('http://localhost:8080/api/residency/monthly-records', {
                 method: 'POST',
@@ -429,21 +484,32 @@ export default function ResidencyManagementPage() {
                   rent: tempCost.rent,
                   maintenance: tempCost.maintenance,
                   utilities: tempCost.utilities,
-                  paymentDate: tempCost.paymentDate,
+                  paymentDate: data.paymentDate, // 업데이트된 납부일 사용
                   paid: false,
                   notes: null
                 })
               })
             }
           }
-          
-          // 기록 다시 불러오기
-          await loadMonthlyRecords()
         }
         
+        // 기록 다시 불러오기
+        await loadMonthlyRecords()
+        
         setIsCostModalOpen(false)
+        alert('주거비 설정이 저장되었습니다.')
       } else {
-        alert('저장에 실패했습니다.')
+        let errorMessage = '저장에 실패했습니다.'
+        try {
+          const errorData = await response.json()
+          if (errorData.error) {
+            errorMessage = errorData.error
+          }
+        } catch (e) {
+          const errorText = await response.text()
+          console.error('주거비 설정 저장 실패 응답:', response.status, errorText)
+        }
+        alert(`${errorMessage} (상태 코드: ${response.status})`)
       }
     } catch (error) {
       console.error('주거비 설정 저장 실패:', error)
@@ -813,7 +879,17 @@ export default function ResidencyManagementPage() {
     setIsIssueRecordModalOpen(true)
   }
 
-  // 이슈 기록 모달에서 저장
+  // 이슈 수정 모달 열기
+  const handleEditIssue = (issue: DefectIssue) => {
+    setEditingIssueId(issue.id)
+    setIssueRecordTitle(issue.title)
+    setIssueRecordStatus(issue.status)
+    setResidencyIssueImage(issue.imageUrl)
+    setResidencyIssueMemo('') // 메모는 별도로 불러와야 할 수도 있음
+    setIsIssueRecordModalOpen(true)
+  }
+
+  // 이슈 기록 모달에서 저장 (생성 또는 수정)
   const handleIssueRecordSave = async () => {
     if (!issueRecordTitle.trim()) {
       alert('이슈 이름을 입력해주세요.')
@@ -839,28 +915,37 @@ export default function ResidencyManagementPage() {
         return
       }
 
-      const response = await fetch('http://localhost:8080/api/residency/defect-issues', {
-        method: 'POST',
+      const isEditing = editingIssueId !== null
+      const url = isEditing 
+        ? `http://localhost:8080/api/residency/defect-issues/${editingIssueId}`
+        : 'http://localhost:8080/api/residency/defect-issues'
+      
+      const method = isEditing ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method: method,
         headers: getAuthHeaders(),
         body: JSON.stringify({
           title: issueRecordTitle.trim(),
           imageUrl: residencyIssueImage,
-          issueDate: new Date().toISOString().split('T')[0],
+          issueDate: isEditing 
+            ? defectIssues.find(i => i.id === editingIssueId)?.date || new Date().toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0],
           status: mapStatusToEnglish(issueRecordStatus),
           memo: residencyIssueMemo || null
         })
       })
 
-      console.log('이슈 기록 저장 요청:', {
+      console.log(`이슈 기록 ${isEditing ? '수정' : '저장'} 요청:`, {
+        id: editingIssueId,
         title: issueRecordTitle.trim(),
         imageUrlLength: residencyIssueImage.length,
-        issueDate: new Date().toISOString().split('T')[0],
         status: mapStatusToEnglish(issueRecordStatus)
       })
 
       if (response.ok) {
         const data = await response.json()
-        const newDefectIssue: DefectIssue = {
+        const updatedIssue: DefectIssue = {
           id: data.id.toString(),
           imageUrl: data.imageUrl,
           title: data.title,
@@ -868,17 +953,26 @@ export default function ResidencyManagementPage() {
           status: mapStatusToKorean(data.status)
         }
         
-        setDefectIssues((prev) => [newDefectIssue, ...prev])
+        if (isEditing) {
+          // 수정: 기존 항목 업데이트
+          setDefectIssues((prev) => 
+            prev.map(issue => issue.id === editingIssueId ? updatedIssue : issue)
+          )
+        } else {
+          // 생성: 새 항목 추가
+          setDefectIssues((prev) => [updatedIssue, ...prev])
+        }
         
         // 초기화
         setResidencyIssueImage(null)
         setResidencyIssueMemo('')
         setIssueRecordTitle('')
         setIssueRecordStatus('접수 완료')
+        setEditingIssueId(null)
         setIsIssueRecordModalOpen(false)
-        alert('이슈 기록이 저장되었습니다.')
+        alert(`이슈 기록이 ${isEditing ? '수정' : '저장'}되었습니다.`)
       } else {
-        let errorMessage = '저장에 실패했습니다.'
+        let errorMessage = `${isEditing ? '수정' : '저장'}에 실패했습니다.`
         try {
           const errorData = await response.json()
           if (errorData.error) {
@@ -886,13 +980,13 @@ export default function ResidencyManagementPage() {
           }
         } catch (e) {
           const errorText = await response.text()
-          console.error('이슈 기록 저장 실패 응답:', response.status, errorText)
+          console.error(`이슈 기록 ${isEditing ? '수정' : '저장'} 실패 응답:`, response.status, errorText)
         }
         alert(`${errorMessage} (상태 코드: ${response.status})`)
       }
     } catch (error) {
-      console.error('이슈 기록 저장 실패:', error)
-      alert('저장 중 오류가 발생했습니다.')
+      console.error(`이슈 기록 ${editingIssueId ? '수정' : '저장'} 실패:`, error)
+      alert(`${editingIssueId ? '수정' : '저장'} 중 오류가 발생했습니다.`)
     }
   }
 
@@ -901,6 +995,9 @@ export default function ResidencyManagementPage() {
     setIsIssueRecordModalOpen(false)
     setIssueRecordTitle('')
     setIssueRecordStatus('접수 완료')
+    setResidencyIssueImage(null)
+    setResidencyIssueMemo('')
+    setEditingIssueId(null)
   }
 
   return (
@@ -1134,6 +1231,13 @@ export default function ResidencyManagementPage() {
                         <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[issue.status]}`}>
                           {issue.status}
                         </span>
+                        <button
+                          onClick={() => handleEditIssue(issue)}
+                          className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                          수정
+                        </button>
                       </div>
                     )
                   })}
@@ -1941,7 +2045,9 @@ export default function ResidencyManagementPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">이슈 기록 등록</h3>
+              <h3 className="text-xl font-bold text-gray-900">
+                {editingIssueId ? '이슈 기록 수정' : '이슈 기록 등록'}
+              </h3>
               <button
                 onClick={handleIssueRecordCancel}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -2019,7 +2125,7 @@ export default function ResidencyManagementPage() {
                 onClick={handleIssueRecordSave}
                 className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
               >
-                저장
+                {editingIssueId ? '수정' : '저장'}
               </button>
             </div>
           </div>

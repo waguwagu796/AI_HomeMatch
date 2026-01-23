@@ -263,7 +263,7 @@ public class ResidencyController {
     }
 
     @PutMapping("/defect-issues/{id}")
-    public ResponseEntity<ResidencyDefectIssueResponse> updateResidencyDefectIssue(
+    public ResponseEntity<?> updateResidencyDefectIssue(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable Long id,
             @RequestBody ResidencyDefectIssueRequest request) {
@@ -273,9 +273,13 @@ public class ResidencyController {
             ResidencyDefectIssueResponse response = residencyService.updateResidencyDefectIssue(userNo, id, request);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("{\"error\": \"" + e.getMessage() + "\"}");
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("{\"error\": \"서버 오류가 발생했습니다: " + e.getMessage() + "\"}");
         }
     }
 
