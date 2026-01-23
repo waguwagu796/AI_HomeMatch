@@ -10,8 +10,19 @@ from fastapi.responses import JSONResponse
 from typing import Optional
 import tempfile
 import os
+import sys
 from pathlib import Path
-from extract_text import OCRProcessor, extract_text_from_contract
+
+# 현재 디렉토리를 Python path에 추가 (uvicorn 실행 시 모듈을 찾기 위해)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+try:
+    from extract_text import OCRProcessor, extract_text_from_contract
+except ImportError:
+    # 상대 import 시도
+    from .extract_text import OCRProcessor, extract_text_from_contract
 
 app = FastAPI(title="OCR API", description="계약서 이미지 OCR 텍스트 추출 API")
 
