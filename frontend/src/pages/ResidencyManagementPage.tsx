@@ -10,6 +10,7 @@ interface HousingCost {
 }
 
 interface MonthlyRecord {
+  id?: number
   year: number
   month: number
   rent: number
@@ -28,9 +29,11 @@ interface EntryStatusRecord {
 }
 
 export default function ResidencyManagementPage() {
-  const [residencyDate, setResidencyDate] = useState<string>('')
+  const [contractStartDate, setContractStartDate] = useState<string>('')
+  const [contractEndDate, setContractEndDate] = useState<string>('')
   const [isEditingDate, setIsEditingDate] = useState<boolean>(false)
-  const [savedDate, setSavedDate] = useState<string>('')
+  const [savedContractStartDate, setSavedContractStartDate] = useState<string>('')
+  const [savedContractEndDate, setSavedContractEndDate] = useState<string>('')
   
   // 주거비 등록 관련 state
   const [isCostModalOpen, setIsCostModalOpen] = useState<boolean>(false)
@@ -50,22 +53,34 @@ export default function ResidencyManagementPage() {
   const [entryStatusRecords, setEntryStatusRecords] = useState<EntryStatusRecord[]>([])
   const [isDragging, setIsDragging] = useState<boolean>(false)
   
-  // localStorage에서 입주 상태 기록 데이터 불러오기
-  useEffect(() => {
-    const savedRecords = localStorage.getItem('entryStatusRecords')
-    if (savedRecords) {
-      try {
-        setEntryStatusRecords(JSON.parse(savedRecords))
-      } catch (e) {
-        console.error('Failed to parse saved entry status records:', e)
+  // 입주 상태 기록 불러오기 (MoveOutPage API 사용)
+  const loadEntryStatusRecords = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) return
+
+      const response = await fetch('http://localhost:8080/api/moveout/entry-status-records', {
+        headers: getAuthHeaders()
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const records: EntryStatusRecord[] = data.map((r: any) => ({
+          id: r.id.toString(),
+          imageUrl: r.imageUrl,
+          date: r.recordDate,
+          type: r.recordType,
+          description: r.description
+        }))
+        setEntryStatusRecords(records)
+      } else if (response.status === 404) {
+        // 데이터가 없으면 빈 배열
+        setEntryStatusRecords([])
       }
+    } catch (error) {
+      console.error('입주 상태 기록 불러오기 실패:', error)
     }
-  }, [])
-  
-  // 입주 상태 기록 데이터가 변경될 때마다 localStorage에 저장
-  useEffect(() => {
-    localStorage.setItem('entryStatusRecords', JSON.stringify(entryStatusRecords))
-  }, [entryStatusRecords])
+  }
   const [isEntryStatusModalOpen, setIsEntryStatusModalOpen] = useState<boolean>(false)
   const [pendingEntryStatus, setPendingEntryStatus] = useState<{ imageUrl: string; date: string } | null>(null)
   const [entryStatusType, setEntryStatusType] = useState<string>('')
@@ -118,53 +133,322 @@ export default function ResidencyManagementPage() {
     '기타 공간'
   ]
 
-  const handleDateSave = () => {
-    if (residencyDate) {
-      setSavedDate(residencyDate)
-      setIsEditingDate(false)
+  // API 호출 헬퍼 함수
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('accessToken')
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token || ''}`
     }
   }
 
-  const handleCostSave = () => {
-    setHousingCost(tempCost)
-    
-    // 자동 등록이 활성화되어 있으면 현재 및 향후 월에 자동으로 기록 생성
-    if (tempCost.autoRegister) {
-      const currentDate = new Date()
-      const currentYear = currentDate.getFullYear()
-      const currentMonth = currentDate.getMonth() + 1
-      
-      // 향후 12개월까지 자동 생성
-      const newRecords: MonthlyRecord[] = []
-      for (let i = 0; i < 12; i++) {
-        const targetDate = new Date(currentYear, currentMonth - 1 + i, 1)
-        const year = targetDate.getFullYear()
-        const month = targetDate.getMonth() + 1
-        
-        // 이미 기록이 있는지 확인
-        const existingRecord = monthlyRecords.find(
-          (r) => r.year === year && r.month === month
-        )
-        
-        if (!existingRecord) {
-          newRecords.push({
-            year,
-            month,
-            rent: tempCost.rent,
-            maintenance: tempCost.maintenance,
-            utilities: tempCost.utilities,
-            paymentDate: tempCost.paymentDate,
-            paid: false,
+  // 계약 기간 불러오기
+  const loadContract = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) return
+
+      const response = await fetch('http://localhost:8080/api/residency/contract', {
+        headers: getAuthHeaders()
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data) {
+          setSavedContractStartDate(data.contractStartDate)
+          setSavedContractEndDate(data.contractEndDate)
+        }
+      } else if (response.status === 404) {
+        // 데이터가 없으면 그냥 넘어감 (정상)
+      }
+    } catch (error) {
+      console.error('계약 기간 불러오기 실패:', error)
+    }
+  }
+
+  // 주거비 설정 불러오기
+  const loadCostSettings = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) return
+
+      const response = await fetch('http://localhost:8080/api/residency/cost-settings', {
+        headers: getAuthHeaders()
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data) {
+          setHousingCost({
+            rent: Number(data.rent),
+            maintenance: Number(data.maintenance),
+            utilities: Number(data.utilities),
+            paymentDate: data.paymentDate,
+            autoRegister: data.autoRegister
           })
         }
+      } else if (response.status === 404) {
+        // 데이터가 없으면 그냥 넘어감 (정상)
       }
-      
-      if (newRecords.length > 0) {
-        setMonthlyRecords([...monthlyRecords, ...newRecords])
-      }
+    } catch (error) {
+      console.error('주거비 설정 불러오기 실패:', error)
     }
-    
-    setIsCostModalOpen(false)
+  }
+
+  // 월별 주거비 기록 불러오기
+  const loadMonthlyRecords = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) return
+
+      const response = await fetch('http://localhost:8080/api/residency/monthly-records', {
+        headers: getAuthHeaders()
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const records: MonthlyRecord[] = data.map((r: any) => ({
+          id: r.id,
+          year: r.year,
+          month: r.month,
+          rent: Number(r.rent),
+          maintenance: Number(r.maintenance),
+          utilities: Number(r.utilities),
+          paymentDate: r.paymentDate,
+          paid: r.paid
+        }))
+        setMonthlyRecords(records)
+      } else if (response.status === 404) {
+        // 데이터가 없으면 빈 배열
+        setMonthlyRecords([])
+      }
+    } catch (error) {
+      console.error('월별 주거비 기록 불러오기 실패:', error)
+    }
+  }
+
+  // 거주 중 이슈 기록 불러오기
+  const loadDefectIssues = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) return
+
+      const response = await fetch('http://localhost:8080/api/residency/defect-issues', {
+        headers: getAuthHeaders()
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const issues: DefectIssue[] = data.map((r: any) => ({
+          id: r.id.toString(),
+          imageUrl: r.imageUrl,
+          title: r.title,
+          date: r.issueDate,
+          status: mapStatusToKorean(r.status)
+        }))
+        setDefectIssues(issues)
+      } else if (response.status === 404) {
+        // 데이터가 없으면 빈 배열
+        setDefectIssues([])
+      }
+    } catch (error) {
+      console.error('거주 중 이슈 기록 불러오기 실패:', error)
+    }
+  }
+
+  // 상태 매핑 함수
+  const mapStatusToKorean = (status: string): '처리 중' | '접수 완료' | '처리 완료' | '거절' => {
+    switch (status) {
+      case 'IN_PROGRESS': return '처리 중'
+      case 'RECEIVED': return '접수 완료'
+      case 'COMPLETED': return '처리 완료'
+      case 'REJECTED': return '거절'
+      default: return '접수 완료'
+    }
+  }
+
+  const mapStatusToEnglish = (status: string): string => {
+    switch (status) {
+      case '처리 중': return 'IN_PROGRESS'
+      case '접수 완료': return 'RECEIVED'
+      case '처리 완료': return 'COMPLETED'
+      case '거절': return 'REJECTED'
+      default: return 'RECEIVED'
+    }
+  }
+
+  // 초기 데이터 로드
+  useEffect(() => {
+    loadContract()
+    loadCostSettings()
+    loadMonthlyRecords()
+    loadDefectIssues()
+    loadEntryStatusRecords()
+  }, [])
+
+  const handleDateSave = async () => {
+    if (contractStartDate && contractEndDate) {
+      // 종료일이 시작일보다 이후인지 확인
+      if (new Date(contractEndDate) <= new Date(contractStartDate)) {
+        alert('계약 종료일은 시작일보다 이후여야 합니다.')
+        return
+      }
+
+      try {
+        const token = localStorage.getItem('accessToken')
+        if (!token) {
+          alert('로그인이 필요합니다.')
+          return
+        }
+
+        // 토큰 확인 로그
+        console.log('토큰 확인:', {
+          hasToken: !!token,
+          tokenLength: token.length,
+          tokenPrefix: token.substring(0, 20) + '...'
+        })
+
+        const headers = getAuthHeaders()
+        console.log('요청 헤더:', {
+          'Content-Type': headers['Content-Type'],
+          'Authorization': headers['Authorization'] ? `Bearer ${headers['Authorization'].substring(7, 27)}...` : '없음'
+        })
+
+        const response = await fetch('http://localhost:8080/api/residency/contract', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({
+            contractStartDate: contractStartDate, // YYYY-MM-DD 형식
+            contractEndDate: contractEndDate,     // YYYY-MM-DD 형식
+            contractDurationMonths: null,
+            notes: null
+          })
+        })
+
+        console.log('계약 기간 저장 요청:', {
+          contractStartDate,
+          contractEndDate,
+          status: response.status
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setSavedContractStartDate(data.contractStartDate)
+          setSavedContractEndDate(data.contractEndDate)
+          setIsEditingDate(false)
+          alert('계약 기간이 저장되었습니다.')
+        } else {
+          let errorMessage = '저장에 실패했습니다.'
+          try {
+            const errorData = await response.json()
+            if (errorData.error) {
+              errorMessage = errorData.error
+            }
+          } catch (e) {
+            const errorText = await response.text()
+            console.error('저장 실패 응답:', response.status, errorText)
+          }
+          
+          // 토큰 관련 오류인 경우 재로그인 유도
+          if (response.status === 400 && errorMessage.includes('토큰')) {
+            if (confirm('인증 토큰이 만료되었거나 유효하지 않습니다. 다시 로그인하시겠습니까?')) {
+              localStorage.removeItem('accessToken')
+              localStorage.removeItem('nickname')
+              window.location.href = '/login'
+              return
+            }
+          }
+          
+          alert(`${errorMessage} (상태 코드: ${response.status})`)
+        }
+      } catch (error) {
+        console.error('계약 기간 저장 실패:', error)
+        alert('저장 중 오류가 발생했습니다.')
+      }
+    } else {
+      alert('계약 시작일과 종료일을 모두 입력해주세요.')
+    }
+  }
+
+  const handleCostSave = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        alert('로그인이 필요합니다.')
+        return
+      }
+
+      // 주거비 설정 저장
+      const response = await fetch('http://localhost:8080/api/residency/cost-settings', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          rent: tempCost.rent,
+          maintenance: tempCost.maintenance,
+          utilities: tempCost.utilities,
+          paymentDate: tempCost.paymentDate,
+          autoRegister: tempCost.autoRegister
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setHousingCost({
+          rent: Number(data.rent),
+          maintenance: Number(data.maintenance),
+          utilities: Number(data.utilities),
+          paymentDate: data.paymentDate,
+          autoRegister: data.autoRegister
+        })
+        
+        // 자동 등록이 활성화되어 있으면 현재 및 향후 월에 자동으로 기록 생성
+        if (tempCost.autoRegister) {
+          const currentDate = new Date()
+          const currentYear = currentDate.getFullYear()
+          const currentMonth = currentDate.getMonth() + 1
+          
+          // 향후 12개월까지 자동 생성
+          for (let i = 0; i < 12; i++) {
+            const targetDate = new Date(currentYear, currentMonth - 1 + i, 1)
+            const year = targetDate.getFullYear()
+            const month = targetDate.getMonth() + 1
+            
+            // 이미 기록이 있는지 확인
+            const existingRecord = monthlyRecords.find(
+              (r) => r.year === year && r.month === month
+            )
+            
+            if (!existingRecord) {
+              // API로 월별 기록 생성
+              await fetch('http://localhost:8080/api/residency/monthly-records', {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                  year,
+                  month,
+                  rent: tempCost.rent,
+                  maintenance: tempCost.maintenance,
+                  utilities: tempCost.utilities,
+                  paymentDate: tempCost.paymentDate,
+                  paid: false,
+                  notes: null
+                })
+              })
+            }
+          }
+          
+          // 기록 다시 불러오기
+          await loadMonthlyRecords()
+        }
+        
+        setIsCostModalOpen(false)
+      } else {
+        alert('저장에 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('주거비 설정 저장 실패:', error)
+      alert('저장 중 오류가 발생했습니다.')
+    }
   }
   
   // 현재 월의 기록 가져오기
@@ -234,8 +518,79 @@ export default function ResidencyManagementPage() {
     })
   }
 
+  // 이미지 압축 및 리사이즈 유틸리티 함수
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          // 최대 크기 설정 (1920px)
+          const MAX_WIDTH = 1920
+          const MAX_HEIGHT = 1920
+          
+          let width = img.width
+          let height = img.height
+          
+          // 비율 유지하면서 리사이즈
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = (height * MAX_WIDTH) / width
+              width = MAX_WIDTH
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = (width * MAX_HEIGHT) / height
+              height = MAX_HEIGHT
+            }
+          }
+          
+          // Canvas로 이미지 리사이즈 및 압축
+          const canvas = document.createElement('canvas')
+          canvas.width = width
+          canvas.height = height
+          
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            reject(new Error('Canvas 컨텍스트를 생성할 수 없습니다.'))
+            return
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height)
+          
+          // JPEG 품질 조정 (0.7 = 70% 품질, 파일 크기와 품질의 균형)
+          // MEDIUMTEXT 타입은 최대 16MB까지 가능하므로, 충분한 여유를 두고 1MB로 제한
+          let quality = 0.85
+          let dataUrl = canvas.toDataURL('image/jpeg', quality)
+          
+          // base64 데이터 크기가 1MB (약 1,300,000 문자)를 초과하면 품질을 낮춤
+          while (dataUrl.length > 1300000 && quality > 0.4) {
+            quality -= 0.1
+            dataUrl = canvas.toDataURL('image/jpeg', quality)
+          }
+          
+          // 여전히 크면 이미지 크기를 더 줄임
+          if (dataUrl.length > 1300000) {
+            width = Math.floor(width * 0.8)
+            height = Math.floor(height * 0.8)
+            canvas.width = width
+            canvas.height = height
+            ctx.drawImage(img, 0, 0, width, height)
+            dataUrl = canvas.toDataURL('image/jpeg', 0.6)
+          }
+          
+          resolve(dataUrl)
+        }
+        img.onerror = () => reject(new Error('이미지를 로드할 수 없습니다.'))
+        img.src = e.target?.result as string
+      }
+      reader.onerror = () => reject(new Error('파일을 읽을 수 없습니다.'))
+      reader.readAsDataURL(file)
+    })
+  }
+
   // 파일 업로드 처리
-  const handleFileUpload = (files: FileList | null) => {
+  const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return
 
     // 첫 번째 파일만 처리 (다중 파일은 나중에 확장 가능)
@@ -245,25 +600,27 @@ export default function ResidencyManagementPage() {
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const imageUrl = e.target?.result as string
+    try {
+      // 이미지 자동 압축
+      const compressedImageUrl = await compressImage(file)
       
       // 모달을 열어서 입주 상태 종류를 입력받음
       setPendingEntryStatus({
-        imageUrl,
+        imageUrl: compressedImageUrl,
         date: new Date().toISOString(),
       })
       setIsEntryStatusModalOpen(true)
       setEntryStatusType('')
       setCustomEntryStatusType('')
       setIsCustomType(false)
+    } catch (error) {
+      console.error('이미지 처리 실패:', error)
+      alert('이미지 처리 중 오류가 발생했습니다.')
     }
-    reader.readAsDataURL(file)
   }
 
   // 입주 상태 기록 저장
-  const handleEntryStatusSave = () => {
+  const handleEntryStatusSave = async () => {
     if (!pendingEntryStatus) return
 
     const finalType = isCustomType ? customEntryStatusType : entryStatusType
@@ -273,19 +630,70 @@ export default function ResidencyManagementPage() {
       return
     }
 
-    const newRecord: EntryStatusRecord = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      imageUrl: pendingEntryStatus.imageUrl,
-      date: pendingEntryStatus.date,
-      type: finalType,
-    }
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        alert('로그인이 필요합니다.')
+        return
+      }
 
-    setEntryStatusRecords((prev) => [newRecord, ...prev])
-    setIsEntryStatusModalOpen(false)
-    setPendingEntryStatus(null)
-    setEntryStatusType('')
-    setCustomEntryStatusType('')
-    setIsCustomType(false)
+      // 이미지 크기 확인 (압축 후에도 2MB를 초과하면 경고)
+      // 실제로는 압축 함수에서 이미 1MB 이하로 조정하므로 이 체크는 거의 실행되지 않음
+      if (pendingEntryStatus.imageUrl.length > 2000000) {
+        alert('이미지가 너무 큽니다. 더 작은 이미지를 사용해주세요.')
+        return
+      }
+
+      const response = await fetch('http://localhost:8080/api/moveout/entry-status-records', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          imageUrl: pendingEntryStatus.imageUrl,
+          recordType: finalType,
+          recordDate: pendingEntryStatus.date.split('T')[0], // YYYY-MM-DD 형식으로 변환
+          description: null
+        })
+      })
+
+      console.log('입주 상태 기록 저장 요청:', {
+        imageUrlLength: pendingEntryStatus.imageUrl.length,
+        recordType: finalType,
+        recordDate: pendingEntryStatus.date.split('T')[0]
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const newRecord: EntryStatusRecord = {
+          id: data.id.toString(),
+          imageUrl: data.imageUrl,
+          date: data.recordDate,
+          type: data.recordType,
+          description: data.description
+        }
+        setEntryStatusRecords((prev) => [newRecord, ...prev])
+        setIsEntryStatusModalOpen(false)
+        setPendingEntryStatus(null)
+        setEntryStatusType('')
+        setCustomEntryStatusType('')
+        setIsCustomType(false)
+        alert('입주 상태 기록이 저장되었습니다.')
+      } else {
+        let errorMessage = '저장에 실패했습니다.'
+        try {
+          const errorData = await response.json()
+          if (errorData.error) {
+            errorMessage = errorData.error
+          }
+        } catch (e) {
+          const errorText = await response.text()
+          console.error('입주 상태 기록 저장 실패 응답:', response.status, errorText)
+        }
+        alert(`${errorMessage} (상태 코드: ${response.status})`)
+      }
+    } catch (error) {
+      console.error('입주 상태 기록 저장 실패:', error)
+      alert('저장 중 오류가 발생했습니다.')
+    }
   }
 
   // 입주 상태 기록 모달 취소
@@ -323,12 +731,32 @@ export default function ResidencyManagementPage() {
   }
 
   // 입주 상태 기록 삭제
-  const handleDeleteEntryStatus = (id: string) => {
-    setEntryStatusRecords((prev) => prev.filter((record) => record.id !== id))
+  const handleDeleteEntryStatus = async (id: string) => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        alert('로그인이 필요합니다.')
+        return
+      }
+
+      const response = await fetch(`http://localhost:8080/api/moveout/entry-status-records/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      })
+
+      if (response.ok) {
+        setEntryStatusRecords((prev) => prev.filter((record) => record.id !== id))
+      } else {
+        alert('삭제에 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('입주 상태 기록 삭제 실패:', error)
+      alert('삭제 중 오류가 발생했습니다.')
+    }
   }
 
   // 거주 중 상태/이슈 기록 파일 업로드 처리
-  const handleResidencyIssueUpload = (files: FileList | null) => {
+  const handleResidencyIssueUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return
 
     const file = files[0]
@@ -337,12 +765,14 @@ export default function ResidencyManagementPage() {
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const imageUrl = e.target?.result as string
-      setResidencyIssueImage(imageUrl)
+    try {
+      // 이미지 자동 압축
+      const compressedImageUrl = await compressImage(file)
+      setResidencyIssueImage(compressedImageUrl)
+    } catch (error) {
+      console.error('이미지 처리 실패:', error)
+      alert('이미지 처리 중 오류가 발생했습니다.')
     }
-    reader.readAsDataURL(file)
   }
 
   // 거주 중 상태/이슈 기록 드래그 앤 드롭 핸들러
@@ -384,7 +814,7 @@ export default function ResidencyManagementPage() {
   }
 
   // 이슈 기록 모달에서 저장
-  const handleIssueRecordSave = () => {
+  const handleIssueRecordSave = async () => {
     if (!issueRecordTitle.trim()) {
       alert('이슈 이름을 입력해주세요.')
       return
@@ -394,24 +824,76 @@ export default function ResidencyManagementPage() {
       alert('사진이 없습니다.')
       return
     }
-    
-    // 이슈 접수 내역에 추가
-    const newDefectIssue: DefectIssue = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      imageUrl: residencyIssueImage,
-      title: issueRecordTitle.trim(),
-      date: new Date().toISOString().split('T')[0],
-      status: issueRecordStatus
+
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        alert('로그인이 필요합니다.')
+        return
+      }
+
+      // 이미지 크기 확인 (압축 후에도 2MB를 초과하면 경고)
+      // 실제로는 압축 함수에서 이미 1MB 이하로 조정하므로 이 체크는 거의 실행되지 않음
+      if (residencyIssueImage.length > 2000000) {
+        alert('이미지가 너무 큽니다. 더 작은 이미지를 사용해주세요.')
+        return
+      }
+
+      const response = await fetch('http://localhost:8080/api/residency/defect-issues', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          title: issueRecordTitle.trim(),
+          imageUrl: residencyIssueImage,
+          issueDate: new Date().toISOString().split('T')[0],
+          status: mapStatusToEnglish(issueRecordStatus),
+          memo: residencyIssueMemo || null
+        })
+      })
+
+      console.log('이슈 기록 저장 요청:', {
+        title: issueRecordTitle.trim(),
+        imageUrlLength: residencyIssueImage.length,
+        issueDate: new Date().toISOString().split('T')[0],
+        status: mapStatusToEnglish(issueRecordStatus)
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const newDefectIssue: DefectIssue = {
+          id: data.id.toString(),
+          imageUrl: data.imageUrl,
+          title: data.title,
+          date: data.issueDate,
+          status: mapStatusToKorean(data.status)
+        }
+        
+        setDefectIssues((prev) => [newDefectIssue, ...prev])
+        
+        // 초기화
+        setResidencyIssueImage(null)
+        setResidencyIssueMemo('')
+        setIssueRecordTitle('')
+        setIssueRecordStatus('접수 완료')
+        setIsIssueRecordModalOpen(false)
+        alert('이슈 기록이 저장되었습니다.')
+      } else {
+        let errorMessage = '저장에 실패했습니다.'
+        try {
+          const errorData = await response.json()
+          if (errorData.error) {
+            errorMessage = errorData.error
+          }
+        } catch (e) {
+          const errorText = await response.text()
+          console.error('이슈 기록 저장 실패 응답:', response.status, errorText)
+        }
+        alert(`${errorMessage} (상태 코드: ${response.status})`)
+      }
+    } catch (error) {
+      console.error('이슈 기록 저장 실패:', error)
+      alert('저장 중 오류가 발생했습니다.')
     }
-    
-    setDefectIssues((prev) => [newDefectIssue, ...prev])
-    
-    // 초기화
-    setResidencyIssueImage(null)
-    setResidencyIssueMemo('')
-    setIssueRecordTitle('')
-    setIssueRecordStatus('접수 완료')
-    setIsIssueRecordModalOpen(false)
   }
 
   // 이슈 기록 모달 취소
@@ -431,42 +913,83 @@ export default function ResidencyManagementPage() {
         </p>
       </div>
 
-      {/* Residency Date Registration */}
+      {/* Contract Period Registration */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-primary-600" />
-            <h2 className="text-xl font-bold text-gray-900">거주시점 날짜</h2>
+            <h2 className="text-xl font-bold text-gray-900">거주 계약 기간</h2>
           </div>
           {!isEditingDate && (
             <button
-              onClick={() => setIsEditingDate(true)}
+              onClick={() => {
+                setIsEditingDate(true)
+                setContractStartDate(savedContractStartDate)
+                setContractEndDate(savedContractEndDate)
+              }}
               className="flex items-center gap-1 px-3 py-1.5 text-sm text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
             >
               <Edit2 className="w-4 h-4" />
-              {savedDate ? '수정' : '등록'}
+              {savedContractStartDate ? '수정' : '등록'}
             </button>
           )}
         </div>
 
         {isEditingDate ? (
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                입주일을 선택해주세요
-              </label>
-              <input
-                type="date"
-                value={residencyDate}
-                onChange={(e) => setResidencyDate(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-                max={new Date().toISOString().split('T')[0]}
-              />
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  계약 시작일 (입주일)
+                </label>
+                <input
+                  type="date"
+                  value={contractStartDate}
+                  onChange={(e) => {
+                    setContractStartDate(e.target.value)
+                    // 시작일이 변경되면 종료일이 시작일보다 이전이면 자동 조정
+                    if (contractEndDate && new Date(contractEndDate) <= new Date(e.target.value)) {
+                      const endDate = new Date(e.target.value)
+                      endDate.setMonth(endDate.getMonth() + 12) // 기본 1년으로 설정
+                      setContractEndDate(endDate.toISOString().split('T')[0])
+                    }
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  max={contractEndDate || undefined}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  계약 종료일 (거주 마감일)
+                </label>
+                <input
+                  type="date"
+                  value={contractEndDate}
+                  onChange={(e) => setContractEndDate(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  min={contractStartDate || undefined}
+                />
+              </div>
             </div>
+            {contractStartDate && contractEndDate && (
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="text-sm text-gray-600">
+                  계약 기간: <span className="font-medium text-gray-900">
+                    {(() => {
+                      const start = new Date(contractStartDate)
+                      const end = new Date(contractEndDate)
+                      const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
+                      const days = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+                      return `${months}개월 (${days}일)`
+                    })()}
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={handleDateSave}
-                disabled={!residencyDate}
+                disabled={!contractStartDate || !contractEndDate}
                 className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 저장
@@ -474,7 +997,8 @@ export default function ResidencyManagementPage() {
               <button
                 onClick={() => {
                   setIsEditingDate(false)
-                  setResidencyDate(savedDate)
+                  setContractStartDate(savedContractStartDate)
+                  setContractEndDate(savedContractEndDate)
                 }}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
               >
@@ -482,25 +1006,41 @@ export default function ResidencyManagementPage() {
               </button>
             </div>
           </div>
-        ) : savedDate ? (
+        ) : savedContractStartDate && savedContractEndDate ? (
           <div className="p-4 bg-primary-50 border border-primary-200 rounded-lg">
-            <div className="text-sm text-gray-600 mb-1">등록된 거주시점</div>
-            <div className="text-lg font-bold text-primary-700">
-              {formatDate(savedDate)}
+            <div className="text-sm text-gray-600 mb-2">등록된 계약 기간</div>
+            <div className="text-lg font-bold text-primary-700 mb-2">
+              {formatDateShort(savedContractStartDate)} ~ {formatDateShort(savedContractEndDate)}
             </div>
-            <div className="text-xs text-gray-500 mt-2">
-              {(() => {
-                const daysDiff = Math.floor(
-                  (new Date().getTime() - new Date(savedDate).getTime()) /
-                    (1000 * 60 * 60 * 24)
-                )
-                return `거주 기간: ${daysDiff}일`
-              })()}
+            <div className="text-xs text-gray-500 space-y-1">
+              <div>
+                {(() => {
+                  const start = new Date(savedContractStartDate)
+                  const end = new Date(savedContractEndDate)
+                  const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
+                  const days = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+                  return `계약 기간: ${months}개월 (${days}일)`
+                })()}
+              </div>
+              <div>
+                {(() => {
+                  const today = new Date()
+                  const end = new Date(savedContractEndDate)
+                  const daysRemaining = Math.floor((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                  if (daysRemaining > 0) {
+                    return `남은 기간: ${daysRemaining}일`
+                  } else if (daysRemaining === 0) {
+                    return `계약 만료일입니다`
+                  } else {
+                    return `계약 만료됨 (${Math.abs(daysRemaining)}일 경과)`
+                  }
+                })()}
+              </div>
             </div>
           </div>
         ) : (
           <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-center text-gray-500">
-            거주시점 날짜를 등록해주세요
+            거주 계약 기간을 등록해주세요
           </div>
         )}
       </div>
