@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Download, Info, FileText, Scale, Check, X, Calendar, Upload, Loader2 } from 'lucide-react'
+import { Download, Info, FileText, Scale, Check, X, Calendar } from 'lucide-react'
 
 interface EntryStatusRecord {
   id: string
@@ -198,13 +198,6 @@ export default function MoveOutPage() {
   const [isInitializing, setIsInitializing] = useState<boolean>(false)
   const hasInitialized = useRef<boolean>(false)
   
-  // 계약서 OCR 관련 상태
-  const [contractFile, setContractFile] = useState<File | null>(null)
-  const [contractPreview, setContractPreview] = useState<string | null>(null)
-  const [extractedText, setExtractedText] = useState<string>('')
-  const [isExtracting, setIsExtracting] = useState<boolean>(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  
   // API 호출 헬퍼 함수
   const getAuthHeaders = () => {
     const token = localStorage.getItem('accessToken')
@@ -337,40 +330,15 @@ export default function MoveOutPage() {
     }
   }
 
-  // 입주 상태 기록 불러오기 (API에서)
-  const loadEntryStatusRecords = async () => {
-    try {
-      const token = localStorage.getItem('accessToken')
-      if (!token) return
-
-      const response = await fetch('http://localhost:8080/api/moveout/entry-status-records', {
-        headers: getAuthHeaders()
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const records: EntryStatusRecord[] = data.map((record: any) => ({
-          id: record.id.toString(),
-          imageUrl: record.imageUrl,
-          date: record.recordDate,
-          type: record.recordType,
-          description: record.description
-        }))
-        setEntryStatusRecords(records)
-      } else if (response.status === 404) {
-        // 기록이 없으면 빈 배열로 설정
-        setEntryStatusRecords([])
-      }
-    } catch (error) {
-      console.error('입주 상태 기록 불러오기 실패:', error)
-    }
-  }
-
-  // 입주 상태 기록 불러오기
+  // localStorage에서 입주 상태 기록 불러오기
   useEffect(() => {
-    const token = localStorage.getItem('accessToken')
-    if (token) {
-      loadEntryStatusRecords()
+    const savedRecords = localStorage.getItem('entryStatusRecords')
+    if (savedRecords) {
+      try {
+        setEntryStatusRecords(JSON.parse(savedRecords))
+      } catch (e) {
+        console.error('Failed to parse saved entry status records:', e)
+      }
     }
   }, [])
 
@@ -458,150 +426,10 @@ export default function MoveOutPage() {
 
   const modalData = modalKey ? (MODAL_CONTENT as any)[modalKey] : null
 
-  // 계약서 파일 선택 핸들러
-  const handleContractFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      // 이미지 파일만 허용
-      if (!file.type.startsWith('image/')) {
-        alert('이미지 파일만 업로드 가능합니다.')
-        return
-      }
-      setContractFile(file)
-      // 미리보기 생성
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setContractPreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
-      // 텍스트 초기화
-      setExtractedText('')
-    }
-  }
-
-  // 계약서 분석 시작 (OCR API 호출)
-  const handleExtractText = async () => {
-    if (!contractFile) {
-      alert('계약서 이미지를 먼저 업로드해주세요.')
-      return
-    }
-
-    setIsExtracting(true)
-    setExtractedText('')
-
-    try {
-      const formData = new FormData()
-      formData.append('file', contractFile)
-      formData.append('preprocess', 'true')
-      formData.append('psm', '6')
-      formData.append('lang', 'kor+eng')
-
-      const response = await fetch('http://localhost:8000/extract', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'OCR 처리 중 오류가 발생했습니다.' }))
-        throw new Error(errorData.detail || 'OCR 처리에 실패했습니다.')
-      }
-
-      const data = await response.json()
-      if (data.success && data.text) {
-        setExtractedText(data.text)
-      } else {
-        throw new Error('텍스트 추출에 실패했습니다.')
-      }
-    } catch (error) {
-      console.error('OCR 오류:', error)
-      alert(error instanceof Error ? error.message : '계약서 분석 중 오류가 발생했습니다.')
-    } finally {
-      setIsExtracting(false)
-    }
-  }
-
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">퇴실 & 분쟁 예방</h1>
-      </div>
-
-      {/* 계약서 분석 섹션 */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">계약서 분석</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          계약서 이미지를 업로드하여 텍스트를 추출하고 분석하세요.
-        </p>
-
-        {/* 파일 업로드 영역 */}
-        <div
-          onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-primary-500 transition-colors"
-        >
-          <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 mb-2">계약서 이미지를 업로드하세요</p>
-          <p className="text-sm text-gray-500 mb-4">
-            JPG, PNG 파일을 지원합니다
-          </p>
-          <button className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-            파일 선택
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleContractFileSelect}
-          />
-        </div>
-
-        {/* 업로드된 이미지 미리보기 */}
-        {contractPreview && (
-          <div className="mt-6">
-            <h3 className="font-medium text-gray-900 mb-3">업로드된 이미지</h3>
-            <div className="border border-gray-200 rounded-lg p-4">
-              <img
-                src={contractPreview}
-                alt="계약서 미리보기"
-                className="max-w-full h-auto max-h-96 mx-auto rounded"
-              />
-              {contractFile && (
-                <p className="text-sm text-gray-600 mt-2 text-center">{contractFile.name}</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* 분석 시작 버튼 */}
-        <button
-          onClick={handleExtractText}
-          disabled={!contractFile || isExtracting}
-          className="mt-6 w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
-          {isExtracting ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span>분석 중...</span>
-            </>
-          ) : (
-            <span>계약서 분석 시작</span>
-          )}
-        </button>
-
-        {/* 추출된 텍스트 표시 */}
-        {extractedText && (
-          <div className="mt-6">
-            <h3 className="font-medium text-gray-900 mb-3">추출된 텍스트</h3>
-            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 max-h-96 overflow-y-auto">
-              <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono">
-                {extractedText}
-              </pre>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              총 {extractedText.length} 글자 추출됨
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Move-in Records */}

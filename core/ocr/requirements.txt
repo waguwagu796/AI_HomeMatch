@@ -1,9 +1,0 @@
-# OCR 전용 패키지 (최소 필수 패키지만 포함)
-# 문제가 발생하면 개별적으로 설치하세요: pip install pytesseract pillow fastapi "uvicorn[standard]" python-multipart
-
-pytesseract
-pillow
-fastapi
-uvicorn[standard]
-python-multipart
-
