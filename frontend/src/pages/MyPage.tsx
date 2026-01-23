@@ -1,8 +1,128 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { User, FileText, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+
+interface UserData {
+  name: string
+  nickname: string
+  email: string
+  phone: string
+}
 
 export default function MyPage() {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('profile')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [formData, setFormData] = useState<UserData>({
+    name: '',
+    nickname: '',
+    email: '',
+    phone: ''
+  })
+
+  useEffect(() => {
+    loadUserData()
+  }, [])
+
+  const loadUserData = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        navigate('/login')
+        return
+      }
+
+      const response = await fetch('http://localhost:8080/api/user/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          navigate('/login')
+          return
+        }
+        throw new Error('사용자 정보를 불러오는데 실패했습니다.')
+      }
+
+      const data = await response.json()
+      setFormData({
+        name: data.name || '',
+        nickname: data.nickname || '',
+        email: data.email || '',
+        phone: data.phone || ''
+      })
+      setLoading(false)
+    } catch (error) {
+      console.error('사용자 정보 로드 실패:', error)
+      alert('사용자 정보를 불러오는데 실패했습니다.')
+      setLoading(false)
+    }
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    try {
+      setSaving(true)
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        navigate('/login')
+        return
+      }
+
+      const response = await fetch('http://localhost:8080/api/user/me', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          navigate('/login')
+          return
+        }
+        const errorText = await response.text()
+        throw new Error(errorText || '정보 수정에 실패했습니다.')
+      }
+
+      const updatedData = await response.json()
+      
+      // 닉네임이 변경되었으면 localStorage 업데이트
+      if (updatedData.nickname) {
+        localStorage.setItem('nickname', updatedData.nickname)
+      }
+      
+      alert('정보가 성공적으로 수정되었습니다.')
+      
+      // 폼 데이터 업데이트
+      setFormData({
+        name: updatedData.name || '',
+        nickname: updatedData.nickname || '',
+        email: updatedData.email || '',
+        phone: updatedData.phone || ''
+      })
+    } catch (error) {
+      console.error('정보 수정 실패:', error)
+      alert(error instanceof Error ? error.message : '정보 수정에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const tabs = [
     { id: 'profile', label: '프로필 관리', icon: User },
@@ -44,41 +164,74 @@ export default function MyPage() {
             <p className="text-gray-600 mb-6">
               개인 정보 및 연락처를 업데이트합니다.
             </p>
-            <div className="space-y-4 max-w-md">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  이름
-                </label>
-                <input
-                  type="text"
-                  defaultValue="김홍매치"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-gray-600">사용자 정보를 불러오는 중...</p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  이메일
-                </label>
-                <input
-                  type="email"
-                  defaultValue="kim.homematch@example.com"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  연락처
-                </label>
-                <input
-                  type="tel"
-                  defaultValue="010-1234-5678"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-              <button className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
-                변경 사항 저장
-              </button>
-            </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    이름
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    닉네임
+                  </label>
+                  <input
+                    type="text"
+                    name="nickname"
+                    value={formData.nickname}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    이메일
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">이메일 변경 시 중복 체크가 수행됩니다.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    연락처
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    placeholder="010-1234-5678"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  disabled={saving}
+                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? '저장 중...' : '변경 사항 저장'}
+                </button>
+              </form>
+            )}
           </div>
         )}
 
