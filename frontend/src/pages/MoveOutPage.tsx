@@ -330,15 +330,40 @@ export default function MoveOutPage() {
     }
   }
 
-  // localStorage에서 입주 상태 기록 불러오기
-  useEffect(() => {
-    const savedRecords = localStorage.getItem('entryStatusRecords')
-    if (savedRecords) {
-      try {
-        setEntryStatusRecords(JSON.parse(savedRecords))
-      } catch (e) {
-        console.error('Failed to parse saved entry status records:', e)
+  // 입주 상태 기록 불러오기 (API에서)
+  const loadEntryStatusRecords = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) return
+
+      const response = await fetch('http://localhost:8080/api/moveout/entry-status-records', {
+        headers: getAuthHeaders()
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const records: EntryStatusRecord[] = data.map((record: any) => ({
+          id: record.id.toString(),
+          imageUrl: record.imageUrl,
+          date: record.recordDate,
+          type: record.recordType,
+          description: record.description
+        }))
+        setEntryStatusRecords(records)
+      } else if (response.status === 404) {
+        // 기록이 없으면 빈 배열로 설정
+        setEntryStatusRecords([])
       }
+    } catch (error) {
+      console.error('입주 상태 기록 불러오기 실패:', error)
+    }
+  }
+
+  // 입주 상태 기록 불러오기
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken')
+    if (token) {
+      loadEntryStatusRecords()
     }
   }, [])
 

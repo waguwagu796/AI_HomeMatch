@@ -47,7 +47,7 @@ public class MoveoutController {
     }
 
     @PostMapping("/entry-status-records")
-    public ResponseEntity<EntryStatusRecordResponse> createEntryStatusRecord(
+    public ResponseEntity<?> createEntryStatusRecord(
             @RequestHeader("Authorization") String authHeader,
             @RequestBody EntryStatusRecordRequest request) {
         try {
@@ -55,8 +55,14 @@ public class MoveoutController {
             Integer userNo = getUserIdFromToken(token);
             EntryStatusRecordResponse response = moveoutService.createEntryStatusRecord(userNo, request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("{\"error\": \"" + e.getMessage() + "\"}");
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("{\"error\": \"서버 오류가 발생했습니다: " + e.getMessage() + "\"}");
         }
     }
 

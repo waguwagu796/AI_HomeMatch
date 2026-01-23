@@ -1,19 +1,19 @@
-package com.homematch.domain.moveout;
+package com.homematch.domain.residency;
 
 import com.homematch.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "entry_status_records")
+@Table(name = "monthly_housing_records")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class EntryStatusRecord {
+public class MonthlyHousingRecord {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,17 +23,32 @@ public class EntryStatusRecord {
     @JoinColumn(name = "user_id", referencedColumnName = "user_no", nullable = false)
     private User user;
 
-    @Column(name = "image_url", nullable = false, columnDefinition = "MEDIUMTEXT")
-    private String imageUrl;
+    @Column(nullable = false)
+    private Integer year;
 
-    @Column(name = "record_type", nullable = false, length = 50)
-    private String recordType;
+    @Column(nullable = false)
+    private Integer month;
 
-    @Column(name = "record_date", nullable = false)
-    private LocalDate recordDate;
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal rent;
+
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal maintenance;
+
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal utilities;
+
+    @Column(name = "payment_date", nullable = false)
+    private Integer paymentDate;
+
+    @Column(nullable = false)
+    private Boolean paid;
+
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
 
     @Column(columnDefinition = "TEXT")
-    private String description;
+    private String notes;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
