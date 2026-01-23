@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { ChevronDown } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { ChevronDown, Search, SlidersHorizontal, MapPin, Home, DollarSign, Calendar, Shield, Heart } from 'lucide-react'
 
 interface Listing {
   listingId: number
@@ -39,6 +39,7 @@ const FILTER_RANGES = {
   rooms: { min: 1, max: 10 },
   area: { min: 10, max: 200 }, // m²
 }
+
 
 export default function PropertyListPage() {
   const [properties, setProperties] = useState<Listing[]>([])
@@ -176,10 +177,10 @@ export default function PropertyListPage() {
 
 
   const badgeColors = {
-    green: 'bg-green-100 text-green-800',
-    orange: 'bg-orange-100 text-orange-800',
-    yellow: 'bg-yellow-100 text-yellow-800',
-    red: 'bg-red-100 text-red-800',
+    green: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    orange: 'bg-orange-50 text-orange-700 border border-orange-200',
+    yellow: 'bg-amber-50 text-amber-700 border border-amber-200',
+    red: 'bg-red-50 text-red-700 border border-red-200',
   }
 
   return (
@@ -530,5 +531,3 @@ export default function PropertyListPage() {
     </div>
   )
 }
-
-

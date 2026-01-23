@@ -1,5 +1,13 @@
-import { useState } from 'react'
-import { Download, Info, FileText, Scale, Check } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Download, Info, FileText, Scale, Check, X, Calendar } from 'lucide-react'
+
+interface EntryStatusRecord {
+  id: string
+  imageUrl: string
+  date: string
+  type: string
+  description?: string
+}
 
 const MODAL_CONTENT = {
   // 분쟁 빈번 항목
@@ -54,7 +62,7 @@ const MODAL_CONTENT = {
 통상적으로는 퇴실 후 1개월 이내가 합리적인 반환 기간으로 판단됩니다.`,
     notice: `※ 관리비 정산, 시설 점검 등 합리적인 기간은 인정될 수 있습니다.`,
     ctas: [
-      { label: '보증금 반환 요청 절차 보기', variant: 'primary', action: 'deposit_guide' },
+      { label: '바로가서 알아보기', variant: 'primary', action: 'molit_guide' },
       { label: '닫기', variant: 'ghost', action: 'close' },
     ],
   },
@@ -65,8 +73,7 @@ const MODAL_CONTENT = {
 내용증명은 법적 강제력은 없지만, 임대인에게 심리적 압박을 주고 추후 지급명령 또는 소송 진행 시 중요한 증거 자료로 활용됩니다.`,
     notice: `※ 실제로 내용증명 발송 후 보증금이 반환되는 사례도 많습니다.`,
     ctas: [
-      { label: '내용증명 자동 작성하기', variant: 'primary', action: 'auto_letter' },
-      { label: '작성 예시 먼저 보기', variant: 'secondary', action: 'letter_sample' },
+      { label: '바로가서 알아보기', variant: 'primary', action: 'epost_guide' },
       { label: '닫기', variant: 'ghost', action: 'close' },
     ],
   },
@@ -77,7 +84,7 @@ const MODAL_CONTENT = {
 지급명령은 비교적 간단한 절차로, 임대인이 이의하지 않을 경우 확정 판결과 동일한 효력을 가집니다.`,
     notice: `※ 소송 전 단계에서 해결되는 사례도 많습니다.`,
     ctas: [
-      { label: '지급명령 절차 한눈에 보기', variant: 'primary', action: 'legal_guide' },
+      { label: '바로가서 알아보기', variant: 'primary', action: 'scourt_guide' },
       { label: '닫기', variant: 'ghost', action: 'close' },
     ],
   },
@@ -87,9 +94,9 @@ const MODAL_CONTENT = {
  *  외부 링크 (공식)
  *  ========================= */
 const EXTERNAL_LINKS = {
-  depositGuide: 'https://www.easylaw.go.kr/CSP/CnpClsMain.laf?csmSeq=683',
-  contentProof: 'https://www.epost.go.kr/service/service_01_04.jsp',
-  paymentOrder: 'https://help.scourt.go.kr/nm/minwon/PaymentOrderGuide.jsp',
+  molit: 'https://www.molit.go.kr',
+  epost: 'https://www.epost.go.kr',
+  scourt: 'https://www.scourt.go.kr',
 }
 
 /** =========================
@@ -173,28 +180,224 @@ function InfoModal({
   )
 }
 
+interface MoveoutChecklist {
+  id: number
+  checklistType: string
+  itemName: string
+  isCompleted: boolean
+  completedAt: string | null
+  notes: string | null
+}
+
 export default function MoveOutPage() {
   const [modalKey, setModalKey] = useState<string | null>(null)
+  const [isScheduleGuideOpen, setIsScheduleGuideOpen] = useState<boolean>(false)
+  const [entryStatusRecords, setEntryStatusRecords] = useState<EntryStatusRecord[]>([])
+  const [moveoutChecklists, setMoveoutChecklists] = useState<MoveoutChecklist[]>([])
+  const [isLoading, setIsLoading] = useState<boolean>(false)
+  
+  // API 호출 헬퍼 함수
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('accessToken')
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token || ''}`
+    }
+  }
+
+  // 체크리스트 불러오기
+  const loadChecklists = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) return null
+
+      const response = await fetch('http://localhost:8080/api/moveout/checklists', {
+        headers: getAuthHeaders()
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setMoveoutChecklists(data)
+        return data
+      }
+      return null
+    } catch (error) {
+      console.error('체크리스트 불러오기 실패:', error)
+      return null
+    }
+  }
+
+  // 체크리스트 항목 업데이트 (자동 저장)
+  const updateChecklistItem = async (id: number, isCompleted: boolean) => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        alert('로그인이 필요합니다.')
+        return
+      }
+
+      setIsLoading(true)
+      const response = await fetch(`http://localhost:8080/api/moveout/checklists/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ isCompleted })
+      })
+
+      if (response.ok) {
+        // 성공 시 체크리스트 다시 불러오기
+        await loadChecklists()
+      } else {
+        alert('저장에 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('체크리스트 업데이트 실패:', error)
+      alert('저장 중 오류가 발생했습니다.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // 초기 체크리스트 생성 (없을 경우)
+  const initializeChecklists = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) return
+
+      const moveOutItems = [
+        '전기 요금 해지 및 정산',
+        '가스 요금 해지 및 정산',
+        '수도 요금 정산',
+        '인터넷 / TV 해지',
+        '열쇠 반납 및 도어락 초기화',
+      ]
+
+      const restorationItems = [
+        '바닥재 오염 및 파손 점검',
+        '붙박이 가구 기능 점검',
+        '창문 및 문 파손 여부',
+        '벽지 손상 여부 확인',
+        '조명·콘센트·스위치 정상 작동',
+      ]
+
+      // 기존 체크리스트가 없으면 생성
+      if (moveoutChecklists.length === 0) {
+        for (const item of moveOutItems) {
+          await fetch('http://localhost:8080/api/moveout/checklists', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+              checklistType: 'MOVE_OUT',
+              itemName: item,
+              isCompleted: false
+            })
+          })
+        }
+
+        for (const item of restorationItems) {
+          await fetch('http://localhost:8080/api/moveout/checklists', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+              checklistType: 'RESTORATION',
+              itemName: item,
+              isCompleted: false
+            })
+          })
+        }
+
+        // 생성 후 다시 불러오기
+        await loadChecklists()
+      }
+    } catch (error) {
+      console.error('체크리스트 초기화 실패:', error)
+    }
+  }
+
+  // localStorage에서 입주 상태 기록 불러오기
+  useEffect(() => {
+    const savedRecords = localStorage.getItem('entryStatusRecords')
+    if (savedRecords) {
+      try {
+        setEntryStatusRecords(JSON.parse(savedRecords))
+      } catch (e) {
+        console.error('Failed to parse saved entry status records:', e)
+      }
+    }
+  }, [])
+
+  // 체크리스트 불러오기 및 초기화
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken')
+    if (token) {
+      loadChecklists().then((data) => {
+        // 체크리스트가 없으면 초기화
+        if (!data || data.length === 0) {
+          initializeChecklists()
+        }
+      })
+    }
+  }, [])
+  
+  const formatDateShort = (dateString: string) => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    return date.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
+
+  // 이미지 다운로드 함수
+  const handleDownloadImage = async (imageUrl: string, statusType: string, date: string) => {
+    try {
+      // 이미지를 fetch로 가져오기
+      const response = await fetch(imageUrl)
+      const blob = await response.blob()
+      
+      // Blob URL 생성
+      const blobUrl = window.URL.createObjectURL(blob)
+      
+      // 다운로드 링크 생성
+      const link = document.createElement('a')
+      link.href = blobUrl
+      
+      // 파일명 생성 (입주 상태 종류_날짜 형식)
+      const formattedDate = date ? new Date(date).toISOString().split('T')[0] : 'unknown'
+      const fileName = `${statusType}_${formattedDate}.jpg`.replace(/[^a-zA-Z0-9._-]/g, '_')
+      
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      
+      // 정리
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(blobUrl)
+    } catch (error) {
+      console.error('이미지 다운로드 실패:', error)
+      alert('이미지 다운로드에 실패했습니다.')
+    }
+  }
 
   const openModal = (key: string) => setModalKey(key)
   const closeModal = () => setModalKey(null)
 
   // CTA 액션: 공식 링크로 이동
   const handleModalAction = (action: string) => {
-    if (action === 'deposit_guide') {
-      window.open(EXTERNAL_LINKS.depositGuide, '_blank')
+    if (action === 'molit_guide') {
+      window.open(EXTERNAL_LINKS.molit, '_blank')
       closeModal()
       return
     }
 
-    if (action === 'auto_letter' || action === 'letter_sample') {
-      window.open(EXTERNAL_LINKS.contentProof, '_blank')
+    if (action === 'epost_guide') {
+      window.open(EXTERNAL_LINKS.epost, '_blank')
       closeModal()
       return
     }
 
-    if (action === 'legal_guide') {
-      window.open(EXTERNAL_LINKS.paymentOrder, '_blank')
+    if (action === 'scourt_guide') {
+      window.open(EXTERNAL_LINKS.scourt, '_blank')
       closeModal()
       return
     }
@@ -218,24 +421,35 @@ export default function MoveOutPage() {
         <p className="text-sm text-gray-600 mb-4">
           입주 시 촬영한 사진과 서류를 확인하고, 새로운 기록을 추가하여 분쟁 발생 시 증거 자료로 활용하세요.
         </p>
-        <div className="grid md:grid-cols-4 gap-10">
-          {[
-            { title: '거실 입주 사진', date: '2023-01-01' },
-            { title: '주방 입주 사진', date: '2023-01-01' },
-            { title: '욕실 입주 사진', date: '2023-01-01' },
-            { title: '계약서 스캔본', date: '2023-01-01' },
-          ].map((item, idx) => (
-            <div key={idx} className="border border-gray-200 rounded-lg p-4">
-              <div className="w-full h-48 bg-gray-200 rounded mb-3"></div>
-              <div className="font-medium text-gray-900 text-sm mb-1">{item.title}</div>
-              <div className="text-xs text-gray-600 mb-2">{item.date}</div>
-              <button className="w-full flex items-center justify-center space-x-2 px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-                <Download className="w-4 h-4" />
-                <span>다운로드</span>
-              </button>
-            </div>
-          ))}
-        </div>
+        {entryStatusRecords.length === 0 ? (
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
+            <p className="text-gray-500 mb-2">등록된 입주 기록이 없습니다.</p>
+            <p className="text-sm text-gray-400">
+              거주 중 관리 페이지에서 입주 상태 사진을 등록하면 여기에 표시됩니다.
+            </p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-4 gap-10">
+            {entryStatusRecords.map((record) => (
+              <div key={record.id} className="border border-gray-200 rounded-lg p-4">
+                <img
+                  src={record.imageUrl}
+                  alt={record.type}
+                  className="w-full h-48 object-cover rounded mb-3 border border-gray-200"
+                />
+                <div className="font-medium text-gray-900 text-sm mb-1">{record.type}</div>
+                <div className="text-xs text-gray-600 mb-2">{formatDateShort(record.date)}</div>
+                <button 
+                  onClick={() => handleDownloadImage(record.imageUrl, record.type, record.date)}
+                  className="w-full flex items-center justify-center space-x-2 px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>다운로드</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Move-out Preparation */}
@@ -249,53 +463,64 @@ export default function MoveOutPage() {
 
           {/* LEFT */}
           <div className="border border-gray-200 rounded-lg p-4">
-            <h3 className="font-bold text-gray-900 mb-4 ml-1">퇴실 체크리스트</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-900 ml-1">퇴실 체크리스트</h3>
+              <button
+                onClick={() => setIsScheduleGuideOpen(true)}
+                className="flex items-center gap-1 px-2 py-1 text-xs text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded transition-colors"
+              >
+                <Info className="w-3 h-3" />
+                <span>가이드</span>
+              </button>
+            </div>
 
             <div className="space-y-3.5">
-              {[
-                '전기 요금 해지 및 정산',
-                '가스 요금 해지 및 정산',
-                '수도 요금 정산',
-                '인터넷 / TV 해지',
-                '열쇠 반납 및 도어락 초기화',
-              ].map((item, idx) => (
-                <label
-                  key={idx}
-                  className="
-                    group
-                    flex items-center justify-between
-                    rounded-lg
-                    px-4 py-3
-                    cursor-pointer
-                    transition-colors
-
-                    bg-slate-100
-                    hover:bg-indigo-200
-                    has-[:checked]:bg-indigo-200
-                  "
-                >
-                  {/* 텍스트 */}
-                  <span
-                    className="
-                      text-sm text-gray-800
-                      group-has-[:checked]:font-semibold
-                      group-has-[:checked]:text-black
-                    "
-                  >
-                    {item}
-                  </span>
-
-                  {/* 체크박스 */}
-                  <input
-                    type="checkbox"
-                    className="
-                      w-4 h-4
-                      accent-indigo-600
+              {moveoutChecklists
+                .filter(item => item.checklistType === 'MOVE_OUT')
+                .map((item) => (
+                  <label
+                    key={item.id}
+                    className={`
+                      group
+                      flex items-center justify-between
+                      rounded-lg
+                      px-4 py-3
                       cursor-pointer
-                    "
-                  />
-                </label>
-              ))}
+                      transition-colors
+                      ${item.isCompleted ? 'bg-indigo-200' : 'bg-slate-100'}
+                      hover:bg-indigo-200
+                    `}
+                  >
+                    {/* 텍스트 */}
+                    <span
+                      className={`
+                        text-sm
+                        ${item.isCompleted ? 'font-semibold text-black' : 'text-gray-800'}
+                      `}
+                    >
+                      {item.itemName}
+                    </span>
+
+                    {/* 체크박스 */}
+                    <input
+                      type="checkbox"
+                      checked={item.isCompleted}
+                      onChange={(e) => updateChecklistItem(item.id, e.target.checked)}
+                      disabled={isLoading}
+                      className="
+                        w-4 h-4
+                        accent-indigo-600
+                        cursor-pointer
+                        disabled:opacity-50
+                      "
+                    />
+                  </label>
+                ))}
+              {moveoutChecklists.filter(item => item.checklistType === 'MOVE_OUT').length === 0 && (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  체크리스트를 불러오는 중...
+                </div>
+              )}
             </div>
           </div>
 
@@ -304,93 +529,53 @@ export default function MoveOutPage() {
             <h3 className="font-bold text-gray-900 mb-4 ml-1">원상복구 체크리스트</h3>
 
             <div className="space-y-3.5">
-              {[
-                '바닥재 오염 및 파손 점검',
-                '붙박이 가구 기능 점검',
-                '창문 및 문 파손 여부',
-                '벽지 손상 여부 확인',
-                '조명·콘센트·스위치 정상 작동',
-              ].map((item, idx) => (
-                <label
-                  key={idx}
-                  className="
-                    group
-                    flex items-center justify-between
-                    rounded-lg
-                    px-4 py-3
-                    cursor-pointer
-                    transition-colors
-
-                    bg-slate-100
-                    hover:bg-indigo-200
-                    has-[:checked]:bg-indigo-200
-                  "
-                >
-                  {/* 텍스트 */}
-                  <span
-                    className="
-                      text-sm text-gray-800
-                      group-has-[:checked]:font-semibold
-                      group-has-[:checked]:text-black
-                    "
-                  >
-                    {item}
-                  </span>
-
-                  {/* 체크박스 */}
-                  <input
-                    type="checkbox"
-                    className="
-                      w-4 h-4
-                      accent-indigo-600
+              {moveoutChecklists
+                .filter(item => item.checklistType === 'RESTORATION')
+                .map((item) => (
+                  <label
+                    key={item.id}
+                    className={`
+                      group
+                      flex items-center justify-between
+                      rounded-lg
+                      px-4 py-3
                       cursor-pointer
-                    "
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
+                      transition-colors
+                      ${item.isCompleted ? 'bg-indigo-200' : 'bg-slate-100'}
+                      hover:bg-indigo-200
+                    `}
+                  >
+                    {/* 텍스트 */}
+                    <span
+                      className={`
+                        text-sm
+                        ${item.isCompleted ? 'font-semibold text-black' : 'text-gray-800'}
+                      `}
+                    >
+                      {item.itemName}
+                    </span>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mt-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-2 ml-1">
-            퇴실 준비 일정
-          </h3>
-          <p className="text-sm text-gray-600 mb-4 ml-1">
-            퇴실 예정일 기준으로 꼭 필요한 절차만 정리했어요.
-          </p>
-
-          <div className="space-y-3">
-            {[
-              { dday: 'D-7', task: '도시가스 · 전기 · 수도 해지 신청' },
-              { dday: 'D-3', task: '인터넷 / TV 해지 예약' },
-              { dday: 'D-1', task: '거주지 이전 및 확정일자 신고' },
-            ].map((item, idx) => (
-              <div
-                key={idx}
-                className="
-                  flex items-center justify-between
-                  px-4 py-3
-                  rounded-lg
-                  bg-slate-50
-                  hover:bg-indigo-50
-                  transition-colors
-                "
-              >
-                <div>
-                  <div className="text-xs font-bold text-indigo-600 mb-0.5">
-                    {item.dday}
-                  </div>
-                  <div className="text-sm text-gray-900">
-                    {item.task}
-                  </div>
+                    {/* 체크박스 */}
+                    <input
+                      type="checkbox"
+                      checked={item.isCompleted}
+                      onChange={(e) => updateChecklistItem(item.id, e.target.checked)}
+                      disabled={isLoading}
+                      className="
+                        w-4 h-4
+                        accent-indigo-600
+                        cursor-pointer
+                        disabled:opacity-50
+                      "
+                    />
+                  </label>
+                ))}
+              {moveoutChecklists.filter(item => item.checklistType === 'RESTORATION').length === 0 && (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  체크리스트를 불러오는 중...
                 </div>
-
-                <button className="text-sm font-medium text-indigo-600 hover:underline">
-                  바로가기
-                </button>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
         </div>
 
@@ -525,6 +710,185 @@ export default function MoveOutPage() {
 
       {/* 모달 렌더 */}
       <InfoModal open={!!modalKey} data={modalData} onClose={closeModal} onAction={handleModalAction} />
+
+      {/* 퇴실 준비 일정 가이드 모달 */}
+      {isScheduleGuideOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">🚪 퇴실 준비 일정 가이드</h2>
+              <button
+                onClick={() => setIsScheduleGuideOpen(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* 상단 안내 */}
+              <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+                <p className="text-sm text-primary-800">
+                  퇴실 예정일 기준으로 꼭 필요한 절차만 시간순으로 정리했어요.
+                  체크리스트를 따라 하나씩 완료해 보세요.
+                </p>
+              </div>
+
+              {/* 퇴실 준비 일정 타임라인 */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary-600" />
+                  퇴실 준비 일정 (타임라인)
+                </h3>
+
+                <div className="space-y-4">
+                  {/* D-7 */}
+                  <div className="border-l-4 border-primary-500 pl-4 py-3 bg-primary-50 rounded-r-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-1 bg-primary-600 text-white text-xs font-bold rounded">D-7</span>
+                      <span className="text-xs font-medium text-primary-700">(필수)</span>
+                    </div>
+                    <h4 className="font-bold text-gray-900 mb-2">도시가스 · 전기 · 수도 해지 신청</h4>
+                    <ul className="space-y-1 text-sm text-gray-700 mb-2">
+                      <li>• 사용 종료일 기준 해지</li>
+                      <li>• 정산 요금 확인</li>
+                    </ul>
+                    <button className="text-xs text-primary-600 hover:underline font-medium">👉 바로가기</button>
+                    <p className="text-xs text-gray-500 mt-2">ℹ️ 계량기 최종 수치는 퇴실 직전에 촬영하면 좋아요.</p>
+                  </div>
+
+                  {/* D-3 (필수) */}
+                  <div className="border-l-4 border-primary-500 pl-4 py-3 bg-primary-50 rounded-r-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-1 bg-primary-600 text-white text-xs font-bold rounded">D-3</span>
+                      <span className="text-xs font-medium text-primary-700">(필수)</span>
+                    </div>
+                    <h4 className="font-bold text-gray-900 mb-2">인터넷 / TV 해지 또는 이전 예약</h4>
+                    <ul className="space-y-1 text-sm text-gray-700 mb-2">
+                      <li>• 장비 반납 일정 확인</li>
+                      <li>• 위약금 발생 여부 확인</li>
+                    </ul>
+                    <button className="text-xs text-primary-600 hover:underline font-medium">👉 바로가기</button>
+                    <p className="text-xs text-gray-500 mt-2">ℹ️ 당일 해지가 어려운 경우가 많아요.</p>
+                  </div>
+
+                  {/* D-3 (중요) */}
+                  <div className="border-l-4 border-amber-500 pl-4 py-3 bg-amber-50 rounded-r-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-1 bg-amber-600 text-white text-xs font-bold rounded">D-3</span>
+                      <span className="text-xs font-medium text-amber-700">(중요)</span>
+                    </div>
+                    <h4 className="font-bold text-gray-900 mb-2">청소 · 원상복구 상태 점검</h4>
+                    <ul className="space-y-1 text-sm text-gray-700 mb-2">
+                      <li>• 기본 청소 (주방, 욕실, 바닥)</li>
+                      <li>• 입주 시 기록한 하자와 비교</li>
+                      <li>• 추가 수리 필요 여부 확인</li>
+                    </ul>
+                    <p className="text-xs text-gray-500 mt-2">ℹ️ 입주 사진 기록이 있으면 판단이 쉬워요.</p>
+                  </div>
+
+                  {/* D-2 */}
+                  <div className="border-l-4 border-amber-500 pl-4 py-3 bg-amber-50 rounded-r-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-1 bg-amber-600 text-white text-xs font-bold rounded">D-2</span>
+                      <span className="text-xs font-medium text-amber-700">(중요 · 분쟁 예방)</span>
+                    </div>
+                    <h4 className="font-bold text-gray-900 mb-2">퇴실 전 상태 사진 촬영</h4>
+                    <ul className="space-y-1 text-sm text-gray-700 mb-2">
+                      <li>• 집 전체 구조</li>
+                      <li>• 청소·수리 완료 상태</li>
+                      <li>• 벽·바닥·설비 주요 부분</li>
+                      <li>• 가스·전기·수도 계량기 수치</li>
+                    </ul>
+                    <button className="text-xs text-primary-600 hover:underline font-medium">👉 촬영 가이드 보기</button>
+                    <p className="text-xs text-gray-500 mt-2">ℹ️ 보증금 분쟁 예방에 가장 중요한 단계예요.</p>
+                  </div>
+
+                  {/* D-1 */}
+                  <div className="border-l-4 border-primary-500 pl-4 py-3 bg-primary-50 rounded-r-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-1 bg-primary-600 text-white text-xs font-bold rounded">D-1</span>
+                      <span className="text-xs font-medium text-primary-700">(필수)</span>
+                    </div>
+                    <h4 className="font-bold text-gray-900 mb-2">거주지 이전 신고 · 확정일자 처리</h4>
+                    <ul className="space-y-1 text-sm text-gray-700 mb-2">
+                      <li>• 전입신고 이전</li>
+                      <li>• 확정일자 이전 또는 말소 확인</li>
+                    </ul>
+                    <button className="text-xs text-primary-600 hover:underline font-medium">👉 바로가기</button>
+                    <p className="text-xs text-gray-500 mt-2">ℹ️ 보증금 보호와 직접 관련된 절차예요.</p>
+                  </div>
+
+                  {/* D-Day */}
+                  <div className="border-l-4 border-red-500 pl-4 py-3 bg-red-50 rounded-r-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded">D-Day</span>
+                      <span className="text-xs font-medium text-red-700">(퇴실 당일)</span>
+                    </div>
+                    <h4 className="font-bold text-gray-900 mb-2">열쇠 반납 및 퇴실 확인</h4>
+                    <ul className="space-y-1 text-sm text-gray-700">
+                      <li>• 열쇠 / 카드키 반납</li>
+                      <li>• 임대인과 퇴실 상태 확인</li>
+                      <li>• 보증금 반환 일정 재확인</li>
+                    </ul>
+                  </div>
+
+                  {/* D+7 ~ D+14 */}
+                  <div className="border-l-4 border-amber-500 pl-4 py-3 bg-amber-50 rounded-r-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-1 bg-amber-600 text-white text-xs font-bold rounded">D+7 ~ D+14</span>
+                      <span className="text-xs font-medium text-amber-700">(중요)</span>
+                    </div>
+                    <h4 className="font-bold text-gray-900 mb-2">보증금 반환 확인</h4>
+                    <ul className="space-y-1 text-sm text-gray-700 mb-2">
+                      <li>• 계약서 기준 반환 기한 확인</li>
+                      <li>• 미반환 시 대응 절차 확인</li>
+                    </ul>
+                    <button className="text-xs text-primary-600 hover:underline font-medium">👉 반환 기준 보기</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 자주 발생하는 분쟁 포인트 */}
+              <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
+                <h3 className="font-bold text-rose-900 mb-3">⚠️ 자주 발생하는 분쟁 포인트</h3>
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-center gap-2 text-sm text-rose-800">
+                    <span>•</span>
+                    <span>도배 / 장판 손상</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-rose-800">
+                    <span>•</span>
+                    <span>주방 설비 하자</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-rose-800">
+                    <span>•</span>
+                    <span>벽걸이 TV · 액자 흔적</span>
+                  </div>
+                </div>
+                <p className="text-xs text-rose-700">
+                  👉 퇴실 전 사진과 입주 기록이 있으면 대부분 예방할 수 있어요.
+                </p>
+              </div>
+
+              {/* 하단 강조 */}
+              <div className="bg-primary-600 text-white rounded-lg p-5 text-center">
+                <p className="text-lg font-bold">✨ 기록해두면, 보증금을 지킬 수 있어요.</p>
+              </div>
+
+              {/* 닫기 버튼 */}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setIsScheduleGuideOpen(false)}
+                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+                >
+                  확인했습니다
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
