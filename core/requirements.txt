@@ -8,3 +8,6 @@ chromadb
 sentence-transformers
 llama-cpp-python
 ollama
+fastapi
+uvicorn[standard]
+python-multipart
