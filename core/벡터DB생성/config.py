@@ -21,7 +21,9 @@ class DBConfig:
 @dataclass(frozen=True)
 class RAGConfig:
     chroma_dir: Path = Path("chroma_store")
-    collection_name: str = "mediation_cases"
+    mediation_collection_name: str = "mediation_cases"
+
+    law_collection_name: str = "housing_lease_law"
     chunk_size: int = 900
     chunk_overlap: int = 150
 
