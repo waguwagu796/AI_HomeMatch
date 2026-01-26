@@ -13,7 +13,7 @@ def get_collection():
     client = chromadb.PersistentClient(
         path=str(RAG.chroma_dir), settings=Settings(anonymized_telemetry=False)
     )
-    return client.get_or_create_collection(name=RAG.collection_name)
+    return client.get_or_create_collection(name=RAG.mediation_collection_name)
 
 
 def retrieve(query: str, top_k: int | None = None) -> List[Dict[str, Any]]:

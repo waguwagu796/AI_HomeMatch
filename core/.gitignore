@@ -3,5 +3,5 @@ dataset
 pages
 .env
 json
-vectorDB/chroma_store
-vectorDB/__pycache__
+벡터DB생성/chroma_store
+벡터DB생성/__pycache__

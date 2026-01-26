@@ -15,7 +15,7 @@ def get_chroma_collection():
     client = chromadb.PersistentClient(
         path=str(RAG.chroma_dir), settings=Settings(anonymized_telemetry=False)
     )
-    return client.get_or_create_collection(name=RAG.collection_name)
+    return client.get_or_create_collection(name=RAG.mediation_collection_name)
 
 
 def build_vector_db(limit: int | None = None):

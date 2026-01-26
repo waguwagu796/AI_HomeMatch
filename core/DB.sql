@@ -34,3 +34,28 @@ CREATE TABLE mediation_cases (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
+
+  
+-- 주택임대차 보호법 법률 원문 테이블 생성
+  CREATE TABLE law_text (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+
+  source_year INT NOT NULL,                 -- 시행연도
+  source_name VARCHAR(200) NOT NULL,        -- 법령명
+  source_doc  VARCHAR(255) NOT NULL,        -- 원본 파일명
+
+  page_start INT NOT NULL,                  -- 시작페이지
+  page_end   INT NOT NULL,                  -- 끝페이지
+
+  title VARCHAR(255) NOT NULL,              -- 조문 범위/제목
+  text  LONGTEXT NOT NULL,                  -- 법률 원문 텍스트
+
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  -- 같은 문서/범위를 중복 저장하지 않게(원하면 제거 가능)
+  UNIQUE KEY uq_law_doc_pages_title (source_doc, page_start, page_end, title),
+
+  KEY idx_law_name_year (source_name, source_year),
+  KEY idx_doc_pages (source_doc, page_start, page_end)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

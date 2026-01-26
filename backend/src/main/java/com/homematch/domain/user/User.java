@@ -46,4 +46,29 @@ public class User {
         this.password = password;
         this.role = role;
     }
+
+    // user_no 필드에 대한 getUserNo() 메서드 추가 (Lombok이 getUser_no()를 생성하므로 수동 추가)
+    public Integer getUserNo() {
+        return this.user_no;
+    }
+
+    // 사용자 정보 업데이트 메서드
+    public void updateInfo(String name, String nickname, String phone) {
+        if (name != null) {
+            this.name = name;
+        }
+        if (nickname != null) {
+            this.nickname = nickname;
+        }
+        if (phone != null) {
+            this.phone = phone;
+        }
+        this.updated_at = LocalDateTime.now();
+    }
+
+    // 이메일 변경 메서드
+    public void updateEmail(String newEmail) {
+        this.email = newEmail;
+        this.updated_at = LocalDateTime.now();
+    }
 }
