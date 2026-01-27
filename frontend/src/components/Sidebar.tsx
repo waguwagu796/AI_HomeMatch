@@ -9,7 +9,6 @@ export default function Sidebar() {
   const navItems = [
     { path: '/home', label: 'Home', icon: Home },
     { path: '/contract/review', label: '계약서 점검', icon: FileText },
-    { path: '/contract/discrepancy', label: '계약서 검증', icon: AlertTriangle },
     { path: '/contract/deed', label: '등기부등본', icon: FileCheck },
     { path: '/residency', label: '거주 관리', icon: Building },
     { path: '/moveout', label: '퇴실 관리', icon: Scale },

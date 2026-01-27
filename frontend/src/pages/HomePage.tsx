@@ -10,6 +10,7 @@ import {
   MapPin
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 interface RecentViewedProperty {
   listingId: number
@@ -441,5 +442,3 @@ export default function HomePage() {
     </div>
   )
 }
-
-

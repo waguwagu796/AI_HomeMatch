@@ -290,19 +290,6 @@ export default function DeedAnalysisPage() {
               <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600" />
             </Link>
             <Link
-              to="/contract/discrepancy"
-              className="bg-white border border-gray-200 rounded-lg p-6 flex items-center justify-between hover:border-primary-300 hover:shadow-md transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="w-10 h-10 text-amber-500" />
-                <div className="text-left">
-                  <h3 className="font-bold text-gray-900">계약서 검증</h3>
-                  <p className="text-sm text-gray-600">중개사 설명 vs 계약서 불일치</p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600" />
-            </Link>
-            <Link
               to="/residency"
               className="bg-white border border-gray-200 rounded-lg p-6 flex items-center justify-between hover:border-primary-300 hover:shadow-md transition-all group"
             >
