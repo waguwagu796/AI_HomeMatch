@@ -1,6 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { FileText, Lightbulb, Users, CheckCircle, House, Shield, Gavel, LayoutDashboard, LogOut } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import logoImage from '../assets/logo.png'
+import logoHouseImage from '../assets/logo_house.png'
 
 export default function LandingPage() {
 
@@ -32,10 +34,12 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center">
-                <span className="text-white font-bold">H</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">HomeMatch</span>
+              <img 
+                src={logoImage} 
+                alt="Home'Scan Logo" 
+                className="h-7 w-auto object-contain"
+              />
+              {/* <span className="text-xl font-bold text-gray-900">Home'Scan</span> */}
             </div>
 
             <div className="flex items-center space-x-4">
@@ -104,17 +108,17 @@ export default function LandingPage() {
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 leading-tight mb-6">
               
               <div className="mb-4">
-                복잡한 주거 문제를
+                복잡한 계약 문제를
               </div>
 
               <div className="text-indigo-600">
-                스마트하게 해결하세요
+                한 번 더 확인하세요.
               </div>
 
             </h1>
 
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              계약부터 입주, 퇴실까지 HomeMatch가 모든 과정을 함께합니다
+              계약부터 입주, 퇴실까지 Home'Scan이 모든 과정을 함께합니다.
             </p>
           </div>
 
@@ -123,7 +127,7 @@ export default function LandingPage() {
             
             {/* 매물 찾기 - 메인 아이콘 버튼 */}
             <Link
-              to="/properties"
+              to="/contract/deed"
               className="
                 group
                 flex flex-col items-center
@@ -149,11 +153,11 @@ export default function LandingPage() {
 
               {/* 텍스트 */}
               <h3 className="text-2xl font-bold text-indigo-600">
-                매물 찾기
+                등기부등본 분석
               </h3>
               <p className="text-base text-gray-600 text-center leading-relaxed">
-                조건에 맞는 집을 찾고<br />
-                계약까지 안전하게 진행하세요
+                집의 소유 관계와 권리 상태를 확인하고<br />
+                위험 요소를 미리 점검하세요.
               </p>
             </Link>
 
@@ -189,7 +193,7 @@ export default function LandingPage() {
               </h3>
               <p className="text-base text-gray-600 text-center leading-relaxed">
                 이미 계약서가 있다면<br />
-                AI로 위험 조항을 먼저 확인하세요
+                AI로 위험 조항을 먼저 확인하세요.
               </p>
             </Link>
 
@@ -209,14 +213,14 @@ export default function LandingPage() {
               <FileText className="w-12 h-12 text-primary-600 mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-2">복잡한 계약</h3>
               <p className="text-gray-600">
-                어렵고 복잡한 법률 용어로 가득 찬 임대차 계약서, 이제 HomeMatch가 쉽게 풀어드립니다.
+                어렵고 복잡한 법률 용어로 가득 찬 임대차 계약서, 이제 Home'Scan이 쉽게 풀어드립니다.
               </p>
             </div>
             <div className="bg-gray-50 rounded-lg p-6">
               <Lightbulb className="w-12 h-12 text-primary-600 mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-2">정보 불균형</h3>
               <p className="text-gray-600">
-                중개사의 설명과 실제 계약 내용의 차이, HomeMatch가 명확하게 비교하고 검증합니다.
+                중개사의 설명과 실제 계약 내용의 차이, Home'Scan이 명확하게 비교하고 검증합니다.
               </p>
             </div>
             <div className="bg-gray-50 rounded-lg p-6">
@@ -231,42 +235,73 @@ export default function LandingPage() {
       </section>
 
       {/* Solution Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            HomeMatch는 이렇게 해결합니다
+      <section className="relative py-28 bg-gray-50 overflow-hidden">
+        {/* 배경 장식 */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-24 left-10 w-72 h-72 bg-indigo-100 rounded-full blur-3xl opacity-30"></div>
+          <div className="absolute bottom-16 right-10 w-96 h-96 bg-blue-100 rounded-full blur-3xl opacity-20"></div>
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-20">
+            Home'Scan은 이렇게 해결합니다.
           </h2>
-          <div className="flex flex-col md:flex-row items-center justify-center space-y-8 md:space-y-0 md:space-x-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-white text-2xl font-bold">1</span>
-              </div>
-              <FileText className="w-12 h-12 text-primary-600 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">AI 계약 검토</h3>
-              <p className="text-gray-600">
-                업로드된 계약서를 분석하여 중요한 조항과 위험 요소를 식별합니다.
+
+          {/* 가로 흐름 카드 */}
+          <div className="flex flex-col md:flex-row items-stretch justify-center gap-10">
+
+            {/* STEP 1 */}
+            <div className="flex-1 bg-white rounded-2xl p-10 text-center shadow-sm">
+              <span className="inline-block text-sm font-semibold text-indigo-600 mb-4">
+                STEP 01
+              </span>
+              <House className="w-10 h-10 text-indigo-600 mx-auto mb-6" />
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                등기부등본 분석
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                집의 소유 관계와 권리 상태를 정리해<br />
+                계약 전에 확인해야 할 위험 요소를 안내합니다.
               </p>
             </div>
-            <div className="text-4xl text-primary-600">→</div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-white text-2xl font-bold">2</span>
-              </div>
-              <House className="w-12 h-12 text-primary-600 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">부동산 정보 비교</h3>
-              <p className="text-gray-600">
-                중개사 설명과 실제 계약서 내용을 비교하여 불일치 여부를 확인합니다.
+
+            {/* 흐름 표시 */}
+            <div className="hidden md:flex items-center text-gray-300 text-3xl">
+              →
+            </div>
+
+            {/* STEP 2 */}
+            <div className="flex-1 bg-white rounded-2xl p-10 text-center shadow-sm">
+              <span className="inline-block text-sm font-semibold text-indigo-600 mb-4">
+                STEP 02
+              </span>
+              <FileText className="w-10 h-10 text-indigo-600 mx-auto mb-6" />
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                계약서 검토
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                복잡한 계약 조항을 AI가 정리해<br />
+                놓치기 쉬운 부분을 쉽게 이해할 수 있게 돕습니다.
               </p>
             </div>
-            <div className="text-4xl text-primary-600">→</div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-white text-2xl font-bold">3</span>
-              </div>
-              <Users className="w-12 h-12 text-primary-600 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">거주 중 관리</h3>
-              <p className="text-gray-600">
-                입주부터 퇴실까지 모든 과정을 체계적으로 관리하고, 분쟁을 예방합니다.
+
+            {/* 흐름 표시 */}
+            <div className="hidden md:flex items-center text-gray-300 text-3xl">
+              →
+            </div>
+
+            {/* STEP 3 */}
+            <div className="flex-1 bg-white rounded-2xl p-10 text-center shadow-sm">
+              <span className="inline-block text-sm font-semibold text-indigo-600 mb-4">
+                STEP 03
+              </span>
+              <Users className="w-10 h-10 text-indigo-600 mx-auto mb-6" />
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                거주 중 관리
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                입주부터 퇴실까지의 기록을 관리해<br />
+                분쟁 걱정 없는 거주를 지원합니다.
               </p>
             </div>
           </div>
@@ -277,7 +312,7 @@ export default function LandingPage() {
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            HomeMatch의 핵심 기능
+            Home'Scan의 핵심 기능
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -332,13 +367,15 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center">
-                  <span className="text-white font-bold">H</span>
-                </div>
-                <span className="text-xl font-bold">HomeMatch</span>
+                <img 
+                  src={logoHouseImage} 
+                  alt="Home'Scan Logo" 
+                  className="h-7 w-auto object-contain"
+                />
+                <span className="text-xl font-bold text-white">Home'Scan</span>
               </div>
               <p className="text-gray-400 text-sm">
-                HomeMatch simplifies your housing journey.
+                Home'Scan simplifies your housing journey.
               </p>
             </div>
             <div>
@@ -368,7 +405,7 @@ export default function LandingPage() {
           </div>
           <div className="mt-8 pt-8 border-t border-gray-800 text-sm text-gray-400">
             <p>
-              면책 조항: HomeMatch에서 제공하는 정보는 일반적인 지침이며 법률 자문을 대체하지 않습니다.
+              면책 조항: Home'Scan에서 제공하는 정보는 일반적인 지침이며 법률 자문을 대체하지 않습니다.
             </p>
           </div>
         </div>
