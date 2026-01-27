@@ -36,7 +36,7 @@ function LayoutContent({ children }: { children: ReactNode }) {
                   alt="Home'Scan Logo" 
                   className="h-7 w-auto object-contain"
                 />
-                {/* <span className="text-xl font-bold">Home'Scan</span> */}
+                <span className="text-xl font-bold text-white">Home'Scan</span>
               </div>
               <p className="text-gray-400 text-sm">
                 Home'Scan simplifies your housing journey.

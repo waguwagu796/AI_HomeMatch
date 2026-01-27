@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Building2, DollarSign, Home, Calendar, FileCheck, Search, AlertTriangle, CheckCircle, Bell } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 interface RecentViewedProperty {
   listingId: number
@@ -22,6 +23,7 @@ interface RecentViewedProperty {
 
 export default function HomePage() {
   const [recentViews, setRecentViews] = useState<RecentViewedProperty[]>([])
+  const navigate = useNavigate()
 
   useEffect(() => {
     loadRecentViews()
@@ -60,6 +62,36 @@ export default function HomePage() {
       return parts.slice(1).join(' ')
     }
     return address
+  }
+
+  // 계약서 점검 페이지와 동일한 데이터 구조
+  const reviewList = [
+    {
+      id: 1,
+      title: '서울시 강남구 테헤란로 123 계약서',
+      date: '2024-01-15',
+      status: '완료',
+      clauses: 3,
+    },
+    {
+      id: 2,
+      title: '서울시 서초구 반포대로 456 계약서',
+      date: '2024-01-10',
+      status: '완료',
+      clauses: 5,
+    },
+    {
+      id: 3,
+      title: '서울시 송파구 잠실로 789 계약서',
+      date: '2024-01-05',
+      status: '완료',
+      clauses: 2,
+    },
+  ]
+
+  const handleReviewClick = (reviewId: number) => {
+    // 계약서 상세 분석 결과로 이동 (URL 파라미터로 reviewId 전달)
+    navigate(`/contract/review?reviewId=${reviewId}`)
   }
 
   return (
@@ -241,20 +273,38 @@ export default function HomePage() {
       </div>
 
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">최근 점검한 계약서</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold text-gray-900">최근 점검한 계약서</h2>
+          <Link to="/contract/review" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+            전체 보기 →
+          </Link>
+        </div>
         <div className="grid md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Link key={i} to="/contract/review" className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
-              <FileCheck className="w-8 h-8 text-primary-600 mb-3" />
-              <div className="text-sm text-gray-600 mb-1">전세 계약서 | 강남구 역삼동</div>
-              <div className="text-xs text-gray-500 mb-2">최종 점검일: 2023.10.26</div>
-              <div className="text-sm text-green-600">위험 낮음 특약 3개</div>
-            </Link>
+          {reviewList.slice(0, 4).map((review) => (
+            <button
+              key={review.id}
+              onClick={() => handleReviewClick(review.id)}
+              className="bg-white border border-gray-200 rounded-lg p-4 text-left hover:border-primary-500 hover:shadow-md transition-all"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <h4 className="font-bold text-gray-900 mb-2 text-sm">{review.title}</h4>
+                  <div className="flex items-center space-x-2 text-xs text-gray-600">
+                    <Calendar className="w-3 h-3" />
+                    <span>{review.date}</span>
+                  </div>
+                </div>
+                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                  {review.status}
+                </span>
+              </div>
+              <div className="text-xs text-gray-600">
+                분석된 특약: {review.clauses}개
+              </div>
+            </button>
           ))}
         </div>
       </div>
     </div>
   )
 }
-
-
