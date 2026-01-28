@@ -224,6 +224,36 @@ export default function FloatingChatbot() {
     )
   }
 
+  /** 스트리밍 SSE 응답을 읽어 청크마다 봇 메시지 텍스트 갱신. 이벤트는 \n\n 구분, 한 이벤트에 data: 여러 줄이면 \n으로 이어 붙임. */
+  const consumeStream = async (
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    onChunk: (delta: string) => void,
+  ) => {
+    const dec = new TextDecoder()
+    let buf = ''
+    const pushEvent = (ev: string) => {
+      const dataLines = ev.split('\n').filter((l) => l.startsWith('data:'))
+      if (dataLines.length === 0) return
+      const payload = dataLines.map((l) => l.slice(5).trimStart()).join('\n')
+      if (payload) onChunk(payload)
+    }
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += dec.decode(value, { stream: true })
+        const events = buf.split('\n\n')
+        buf = events.pop() ?? ''
+        for (const ev of events) {
+          pushEvent(ev)
+        }
+      }
+      if (buf.trim()) pushEvent(buf)
+    } finally {
+      reader.releaseLock()
+    }
+  }
+
   const sendMessageWithText = async (messageText: string) => {
     if (!messageText.trim() || isLoading) return
     setHasSentMessageInCurrentTopic(true)
@@ -235,10 +265,12 @@ export default function FloatingChatbot() {
     }
     setMessages((prev) => [...prev, userMessage])
     setIsLoading(true)
+    const botId = Date.now() + 1
+    setMessages((prev) => [...prev, { id: botId, type: 'bot', text: '', timestamp: new Date() }])
     try {
       const token = localStorage.getItem('accessToken')
       if (!token) throw new Error('로그인이 필요합니다.')
-      const response = await fetch('http://localhost:8080/api/chatbot/messages', {
+      const response = await fetch('http://localhost:8080/api/chatbot/messages/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -247,26 +279,42 @@ export default function FloatingChatbot() {
         body: JSON.stringify({ text: messageText.trim(), topic: selectedTopic ?? undefined }),
       })
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: '서버 오류가 발생했습니다.' }))
-        throw new Error(errorData.error || '메시지 전송에 실패했습니다.')
+        const errBody = await response.text()
+        let errMsg = '메시지 전송에 실패했습니다.'
+        try {
+          const j = JSON.parse(errBody)
+          if (j?.error) errMsg = j.error
+        } catch {
+          if (errBody) errMsg = errBody.slice(0, 200)
+        }
+        throw new Error(errMsg)
       }
-      const botResponse: ChatbotMessageResponse = await response.json()
-      const botMessage: Message = {
-        id: botResponse.id || Date.now(),
-        type: 'bot',
-        text: botResponse.text,
-        timestamp: botResponse.timestamp ? new Date(botResponse.timestamp) : new Date(),
-      }
-      setMessages((prev) => [...prev, botMessage])
+      const reader = response.body?.getReader()
+      if (!reader) throw new Error('스트리밍 응답을 읽을 수 없습니다.')
+      const FINAL_PREFIX = '[FINAL]\n'
+      await consumeStream(reader, (delta) => {
+        setMessages((prev) => {
+          const i = prev.findIndex((m) => m.id === botId)
+          if (i < 0) return prev
+          const next = [...prev]
+          if (delta.startsWith(FINAL_PREFIX)) {
+            next[i] = { ...next[i], text: delta.slice(FINAL_PREFIX.length) }
+          } else {
+            next[i] = { ...next[i], text: (next[i].text || '') + delta }
+          }
+          return next
+        })
+      })
     } catch (error) {
       console.error('메시지 전송 오류:', error)
-      const errorMessage: Message = {
-        id: Date.now(),
-        type: 'bot',
-        text: error instanceof Error ? error.message : '메시지 전송 중 오류가 발생했습니다.',
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, errorMessage])
+      const errText = error instanceof Error ? error.message : '메시지 전송 중 오류가 발생했습니다.'
+      setMessages((prev) => {
+        const i = prev.findIndex((m) => m.id === botId)
+        if (i < 0) return [...prev, { id: botId, type: 'bot', text: errText, timestamp: new Date() }]
+        const next = [...prev]
+        next[i] = { ...next[i], text: errText }
+        return next
+      })
     } finally {
       setIsLoading(false)
     }
