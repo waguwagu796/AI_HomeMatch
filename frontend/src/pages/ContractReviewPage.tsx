@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { FileText, Lightbulb, CheckCircle, AlertTriangle, Copy, Upload, ArrowLeft, Plus, Calendar, FileCheck, ChevronRight } from 'lucide-react'
+import { FileText, Lightbulb, CheckCircle, AlertTriangle, Copy, Upload, ArrowLeft, Plus, FileCheck, ChevronRight } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 export default function ContractReviewPage() {
@@ -63,26 +63,47 @@ export default function ContractReviewPage() {
 
   const currentClause = clauses[selectedClause]
 
-  // 지난 점검 목록 데이터
+  // 지난 점검 목록 데이터 (계약 유형·주소·당사자 등 식별 정보 포함)
   const reviewList = [
     {
       id: 1,
-      title: '서울시 강남구 테헤란로 123 계약서',
+      type: '전세',
+      address: '서울시 강남구 테헤란로 123',
+      lessor: '김○○',
+      lessee: '이○○',
       date: '2024-01-15',
+      deposit: '3억 5천만 원',
+      period: '2024.01.15 ~ 2025.01.14',
+      area: '전용 84㎡',
+      purpose: '주거용',
       status: '완료',
       clauses: 3,
     },
     {
       id: 2,
-      title: '서울시 서초구 반포대로 456 계약서',
+      type: '월세',
+      address: '서울시 서초구 반포대로 456',
+      lessor: '박○○',
+      lessee: '최○○',
       date: '2024-01-10',
+      deposit: '5천만 원 / 50만 원',
+      period: '2024.01.10 ~ 2025.01.09',
+      area: '전용 59㎡',
+      purpose: '주거용',
       status: '완료',
       clauses: 5,
     },
     {
       id: 3,
-      title: '서울시 송파구 잠실로 789 계약서',
+      type: '전세',
+      address: '서울시 송파구 잠실로 789',
+      lessor: '정○○',
+      lessee: '한○○',
       date: '2024-01-05',
+      deposit: '2억 2천만 원',
+      period: '2024.01.05 ~ 2025.01.04',
+      area: '전용 72㎡',
+      purpose: '주거용',
       status: '완료',
       clauses: 2,
     },
@@ -93,20 +114,20 @@ export default function ContractReviewPage() {
       {/* 목록 보기 */}
       {view === 'list' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between max-w-[1000px] mx-auto">
             <h1 className="text-3xl font-bold text-gray-900">계약서 점검</h1>
             <button
               onClick={() => setView('upload')}
               className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
             >
               <Plus className="w-5 h-5" />
-              <span>새로 추가</span>
+              <span>계약서 추가</span>
             </button>
           </div>
 
-          {/* 지난 점검 목록 */}
+          {/* 지난 점검 목록 - 계약서 문서 형태 카드 */}
           {reviewList.length > 0 ? (
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-16 max-w-[1000px] mx-auto pt-4">
               {reviewList.map((review) => (
                 <button
                   key={review.id}
@@ -114,22 +135,49 @@ export default function ContractReviewPage() {
                     setSelectedReview(review.id)
                     setView('detail')
                   }}
-                  className="bg-white border border-gray-200 rounded-lg p-6 text-left hover:border-primary-500 hover:shadow-md transition-all"
+                  className="group text-left transition-all duration-200 hover:scale-[1.01] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-sm"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h4 className="font-bold text-gray-900 mb-2">{review.title}</h4>
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
-                        <Calendar className="w-4 h-4" />
+                  {/* 계약서 문서 형태 카드 */}
+                  <div className="relative bg-[#faf8f5] rounded-sm shadow-md group-hover:shadow-lg overflow-hidden min-h-[260px] flex flex-col">
+                    {/* 상단 접힌 부분 (문서 느낌) */}
+                    <div className="h-1 bg-gradient-to-b from-gray-200/60 to-transparent" />
+
+                    {/* 문서 헤더 - 계약서 제목 */}
+                    <div className="px-5 pt-8 pb-5 border-b border-gray-400/40">
+                      <div className="flex items-center justify-between">
+                        <span className="inline-block px-3 py-1 bg-amber-100 text-amber-900 text-lg font-semibold rounded">
+                          {review.type} 계약서
+                        </span>
+                        <span className="px-3 py-1 bg-green-100 text-green-800 text-base font-medium rounded-full">
+                          {review.status}
+                        </span>
+                      </div>
+                      <h4 className="font-bold text-gray-900 mt-3.5 text-xl tracking-tight pl-1.5" style={{ fontFamily: 'Georgia, "Noto Serif KR", serif' }}>
+                        {review.address}
+                      </h4>
+                    </div>
+
+                    {/* 계약 내용 요약 (문서 본문 느낌) */}
+                    <div className="flex-1 px-5 pt-8 pb-2 flex items-start text-base min-h-0">
+                      <div className="flex justify-between w-full text-gray-700">
+                        <span className="text-gray-500">계약일</span>
                         <span>{review.date}</span>
                       </div>
                     </div>
-                    <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                      {review.status}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    분석된 특약: {review.clauses}개
+
+                    {/* 하단 구분선 + 분석 정보 */}
+                    <div className="px-5 py-2.5 bg-gray-100/50 border-t border-gray-300/50 flex items-center justify-between">
+                      <span className="text-sm text-gray-500 flex items-center gap-1">
+                        <FileCheck className="w-4 h-4" />
+                        분석된 특약 {review.clauses}개
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
+                    </div>
+
+                    {/* 우하단 '인' 스탬프 느낌 */}
+                    <div className="absolute bottom-16 right-5 w-9 h-9 border-2 border-red-400/70 rounded-full flex items-center justify-center text-red-600/80 text-xs font-bold" style={{ fontFamily: 'Georgia, serif' }}>
+                      인
+                    </div>
                   </div>
                 </button>
               ))}
@@ -226,7 +274,7 @@ export default function ContractReviewPage() {
 
             <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-yellow-800">
-                ⚠ 본 AI 점검 결과는 법률 자문이 아니며, 정보 제공을 목적으로 합니다.
+                본 AI 점검 결과는 법률 자문이 아니며, 정보 제공을 목적으로 합니다.
               </p>
             </div>
 
@@ -263,21 +311,21 @@ export default function ContractReviewPage() {
             <h1 className="text-3xl font-bold text-gray-900">계약서 상세 분석 결과</h1>
           </div>
 
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-            <div className="flex items-start space-x-3">
-              <AlertTriangle className="w-6 h-6 text-red-500 mt-1" />
-              <div>
-                <h3 className="font-bold text-red-900 mb-1">면책 고지</h3>
-                <p className="text-sm text-red-800">
-                  본 AI 점검 결과는 법률 자문이 아니며, 정보 제공을 목적으로 합니다. 정확한 법률 판단은 반드시 전문가와 상담하시기 바랍니다.
-                </p>
-              </div>
+          <div className="bg-red-50 p-5 rounded-xl shadow-sm">
+            <span className="inline-block px-3 py-1 mb-2 text-sm font-semibold rounded-full bg-red-100 text-red-700">
+              중요 안내
+            </span>
+            <div className="pl-2">
+              <h3 className="font-bold text-red-900 mb-1 text-xl">면책 고지</h3>
+              <p className="text-base text-red-800 leading-relaxed">
+                본 AI 점검 결과는 법률 자문이 아니며, 정보 제공을 목적으로 합니다. 정확한 법률 판단은 반드시 전문가와 상담하시기 바랍니다.
+              </p>
             </div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-6 items-stretch">
             {/* Left Panel - Clause List */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 h-full flex flex-col">
               <h2 className="text-lg font-bold text-gray-900 mb-4">특약 리스트 및 중요 키워드</h2>
               <div className="space-y-2">
                 {clauses.map((clause, idx) => (
@@ -360,16 +408,18 @@ export default function ContractReviewPage() {
                   {currentClause.standard}
                 </div>
               </div>
-
-              <button
-                onClick={() => {
-                  setShowDiscrepancy(true)
-                }}
-                className="block w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-center font-medium"
-              >
-                중개사 설명 vs 계약서 불일치 확인하기
-              </button>
             </div>
+          </div>
+
+          <div className="mt-8">
+            <button
+              onClick={() => {
+                setShowDiscrepancy(true)
+              }}
+              className="block w-full px-10 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-600 text-center font-semibold text-lg shadow-md"
+            >
+              중개사 설명 vs 계약서 불일치 확인하기
+            </button>
           </div>
 
           {/* 불일치 분석 섹션 */}
@@ -395,12 +445,9 @@ export default function ContractReviewPage() {
 
                 {/* Center Panel - Warning */}
                 <div className="bg-white border-2 border-red-500 rounded-lg p-6">
-                  <div className="flex items-start space-x-3 mb-4">
-                    <AlertTriangle className="w-6 h-6 text-red-500 mt-1" />
-                    <h3 className="text-lg font-bold text-red-900">
-                      중개사 설명과 계약서 내용이 심각하게 불일치
-                    </h3>
-                  </div>
+                  <h3 className="text-lg font-bold text-red-900 mb-4">
+                    중개사 설명과 계약서 내용이 심각하게 불일치
+                  </h3>
                   <div className="text-sm text-gray-700 space-y-2">
                     <p>
                       중개사는 전세권이 없으며 대출금액이 적어 안전하다고 설명했으나, 계약서에는 선순위 전세권과 2억 5천만 원의 근저당권이 명시되어 있습니다.
@@ -420,30 +467,6 @@ export default function ContractReviewPage() {
                   <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700">
                     본 계약 체결 전 확인된 등기부등본에 따르면, 해당 건물에는 선순위 전세권 설정(전세금 1억원)이 완료되어 있으며, 채무최고액 2억 5천만 원의 근저당권이 설정되어 있음을 확인한다. 임차인은 이 사실을 충분히 인지하고 본 계약에 동의한다.
                   </div>
-                </div>
-              </div>
-
-              {/* 다음 단계: 등기부등본 분석 */}
-              <div className="bg-white border-2 border-primary-200 rounded-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                      <FileCheck className="w-6 h-6 text-primary-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">다음: 등기부등본 분석</h3>
-                      <p className="text-sm text-gray-600">
-                        소유자 일치, 근저당·가압류, 공동소유 등 6가지만 확인하세요.
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    to="/contract/deed"
-                    className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
-                  >
-                    등기부등본 분석하기
-                    <ChevronRight className="w-4 h-4" />
-                  </Link>
                 </div>
               </div>
 
@@ -477,6 +500,30 @@ export default function ContractReviewPage() {
                   <button className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium">
                     위험 점수 가이드 확인
                   </button>
+                </div>
+              </div>
+
+              {/* 다음 단계: 등기부등본 분석 */}
+              <div className="bg-white border-2 border-primary-200 rounded-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
+                      <FileCheck className="w-6 h-6 text-primary-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">다음: 등기부등본 분석</h3>
+                      <p className="text-sm text-gray-600">
+                        소유자 일치, 근저당·가압류, 공동소유 등 6가지만 확인하세요.
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    to="/contract/deed"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
+                  >
+                    등기부등본 분석하기
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
                 </div>
               </div>
             </div>
