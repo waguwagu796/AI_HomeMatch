@@ -131,313 +131,259 @@ export default function HomePage() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* 빠른 액션 버튼 - 간결하게 */}
+    <div className="space-y-10">
+      {/* 빠른 액션 */}
       <div className="grid md:grid-cols-3 gap-4">
         <Link
           to="/contract/review"
-          className="group bg-white border-2 border-gray-200 rounded-xl p-5 hover:border-primary-300 hover:shadow-md transition-all"
+          className="group bg-white border border-slate-200 rounded-xl p-5 hover:border-primary-400/60 hover:shadow-sm transition-all duration-200"
         >
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center group-hover:bg-primary-200 transition-colors">
+            <div className="w-10 h-10 bg-primary-50 rounded-lg flex items-center justify-center group-hover:bg-primary-100 transition-colors">
               <FileText className="w-5 h-5 text-primary-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">계약서 점검</h3>
+            <h3 className="text-lg font-semibold text-slate-800">계약서 점검</h3>
           </div>
-          <p className="text-sm text-gray-600">AI로 위험 조항 확인</p>
+          <p className="text-sm text-slate-500">위험 조항 한눈에 확인</p>
         </Link>
-
         <Link
           to="/contract/deed"
-          className="group bg-white border-2 border-gray-200 rounded-xl p-5 hover:border-primary-300 hover:shadow-md transition-all"
+          className="group bg-white border border-slate-200 rounded-xl p-5 hover:border-primary-400/60 hover:shadow-sm transition-all duration-200"
         >
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center group-hover:bg-amber-200 transition-colors">
-              <FileCheck className="w-5 h-5 text-amber-600" />
+            <div className="w-10 h-10 bg-primary-50 rounded-lg flex items-center justify-center group-hover:bg-primary-100 transition-colors">
+              <FileCheck className="w-5 h-5 text-primary-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">등기부등본 분석</h3>
+            <h3 className="text-lg font-semibold text-slate-800">등기부등본 분석</h3>
           </div>
-          <p className="text-sm text-gray-600">6가지 핵심 확인 항목</p>
+          <p className="text-sm text-slate-500">6가지 핵심 확인 항목</p>
         </Link>
-
         <Link
           to="/contract/discrepancy"
-          className="group bg-white border-2 border-gray-200 rounded-xl p-5 hover:border-primary-300 hover:shadow-md transition-all"
+          className="group bg-white border border-slate-200 rounded-xl p-5 hover:border-primary-400/60 hover:shadow-sm transition-all duration-200"
         >
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+            <div className="w-10 h-10 bg-primary-50 rounded-lg flex items-center justify-center group-hover:bg-primary-100 transition-colors">
+              <AlertTriangle className="w-5 h-5 text-primary-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">계약서 검증</h3>
+            <h3 className="text-lg font-semibold text-slate-800">계약서 검증</h3>
           </div>
-          <p className="text-sm text-gray-600">중개사 설명 vs 계약서</p>
+          <p className="text-sm text-slate-500">중개사 설명 vs 계약서</p>
         </Link>
       </div>
 
-      {/* 집 찾기 - 간단하게 통합 */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-blue-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900">집 찾기</h2>
-          </div>
-          <Link 
-            to="/properties" 
-            className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
-          >
-            전체 보기
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-        
-        {/* 간단한 검색바 */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex-1 flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 focus-within:border-primary-500 focus-within:bg-white transition-colors">
-            <MapPin className="w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="지역을 입력하세요 (예: 강남구, 역삼동)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="flex-1 outline-none bg-transparent text-gray-900 placeholder-gray-400"
-            />
-          </div>
-          <button 
-            onClick={handleSearch}
-            className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium flex items-center gap-2 transition-colors"
-          >
-            <Search className="w-5 h-5" />
-            검색
-          </button>
-        </div>
-
-        {/* 빠른 필터 */}
-        <div className="flex flex-wrap gap-2">
-          <Link
-            to="/properties?leaseType=전세"
-            className="px-4 py-2 bg-gray-100 hover:bg-primary-100 text-gray-700 hover:text-primary-700 rounded-lg text-sm font-medium transition-colors"
-          >
-            전세
-          </Link>
-          <Link
-            to="/properties?leaseType=월세"
-            className="px-4 py-2 bg-gray-100 hover:bg-primary-100 text-gray-700 hover:text-primary-700 rounded-lg text-sm font-medium transition-colors"
-          >
-            월세
-          </Link>
-          <Link
-            to="/properties?parking=true"
-            className="px-4 py-2 bg-gray-100 hover:bg-primary-100 text-gray-700 hover:text-primary-700 rounded-lg text-sm font-medium transition-colors"
-          >
-            주차 가능
-          </Link>
-        </div>
-      </div>
-
-      {/* 알림 섹션 */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">알림</h2>
-        <div className="space-y-3">
-          <div className="bg-white border-l-4 border-red-500 rounded-lg p-4 flex items-start space-x-3 hover:shadow-md transition-shadow">
-            <AlertTriangle className="w-6 h-6 text-red-500 mt-1 flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="font-bold text-gray-900 mb-1">계약 만료 임박</h3>
-              <p className="text-sm text-gray-600">강남구 역삼동 계약 만료일이 2개월 남았습니다. 갱신 여부를 확인하세요.</p>
-            </div>
-          </div>
-          <div className="bg-white border-l-4 border-blue-500 rounded-lg p-4 flex items-start space-x-3 hover:shadow-md transition-shadow">
-            <Bell className="w-6 h-6 text-blue-500 mt-1 flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="font-bold text-gray-900 mb-1">새로운 계약서 점검 결과</h3>
-              <p className="text-sm text-gray-600">업로드하신 전세 계약서의 AI 점검 결과가 나왔습니다. 지금 확인하세요.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 최근 활동 */}
+      {/* 최근 본 매물 + 최근 점검한 계약서 (집 찾기 위로) */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* 최근 본 매물 */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">최근 본 매물</h2>
+        <section className="bg-white border border-slate-200 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-semibold text-slate-800 border-b-2 border-primary-500 pb-1 pr-2">최근 본 매물</h2>
             {recentViews.length > 0 && (
               <button
                 onClick={() => {
                   localStorage.removeItem('recentViewedProperties')
                   setRecentViews([])
                 }}
-                className="text-sm text-gray-600 hover:text-gray-900"
+                className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
               >
                 전체 삭제
               </button>
             )}
           </div>
           {recentViews.length === 0 ? (
-            <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-              <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-600 mb-4">최근 본 매물이 없습니다.</p>
+            <div className="py-10 text-center rounded-lg bg-slate-50/50">
+              <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <p className="text-sm text-slate-500 mb-3">최근 본 매물이 없습니다.</p>
               <Link
                 to="/properties"
-                className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium"
+                className="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-700 font-medium"
               >
-                매물 찾기
-                <ArrowRight className="w-4 h-4" />
+                매물 찾기 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {recentViews.map((view) => (
                 <Link
                   key={view.listingId}
                   to={`/properties/${view.listingId}`}
-                  className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-all group"
+                  className="block rounded-lg border border-slate-100 overflow-hidden hover:border-primary-200 hover:shadow-sm transition-all duration-200 group"
                 >
-                  <div className="h-32 bg-gradient-to-br from-gray-100 to-gray-200"></div>
-                  <div className="p-3">
-                    <div className="text-xs text-gray-500 mb-1 truncate">
-                      {getAddressParts(view.data.address)}
-                    </div>
-                    <div className="font-bold text-sm mb-1 truncate">{formatPrice(view.data)}</div>
-                    <div className="text-xs text-gray-600">{formatArea(view.data.areaM2)}</div>
+                  <div className="h-28 bg-slate-100" />
+                  <div className="p-3 bg-white">
+                    <p className="text-xs text-slate-500 truncate mb-0.5">{getAddressParts(view.data.address)}</p>
+                    <p className="font-semibold text-sm text-slate-800 truncate group-hover:text-primary-600 transition-colors">{formatPrice(view.data)}</p>
+                    <p className="text-xs text-slate-500">{formatArea(view.data.areaM2)}</p>
                   </div>
                 </Link>
               ))}
             </div>
           )}
-        </div>
+        </section>
 
-        {/* 최근 점검한 계약서 */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">최근 점검한 계약서</h2>
-            <Link 
-              to="/contract/review" 
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-            >
-              전체 보기
+        <section className="bg-white border border-slate-200 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-semibold text-slate-800 border-b-2 border-primary-500 pb-1 pr-2">최근 점검한 계약서</h2>
+            <Link to="/contract/review" className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-0.5">
+              전체 보기 <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {[1, 2].map((i) => (
-              <Link 
-                key={i} 
-                to="/contract/review" 
-                className="block bg-white border border-gray-200 rounded-lg p-4 hover:border-primary-300 hover:shadow-md transition-all group"
+              <Link
+                key={i}
+                to="/contract/review"
+                className="flex items-center justify-between gap-3 p-3 rounded-lg border border-slate-100 hover:border-primary-200 hover:bg-primary-50/30 transition-all duration-200 group"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-5 h-5 text-primary-600" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-900 mb-1">전세 계약서 | 강남구 역삼동</div>
-                      <div className="text-xs text-gray-500 mb-1">최종 점검일: 2024.01.15</div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">
-                          위험 낮음
-                        </span>
-                        <span className="text-xs text-gray-500">특약 3개</span>
-                      </div>
-                    </div>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 bg-primary-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-4 h-4 text-primary-600" />
                   </div>
-                  <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-primary-600 group-hover:translate-x-1 transition-all" />
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-800 truncate text-sm">전세 계약서 | 강남구 역삼동</p>
+                    <p className="text-xs text-slate-500">최종 점검일: 2024.01.15</p>
+                    <span className="inline-block mt-1 text-xs px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md">위험 낮음</span>
+                  </div>
                 </div>
+                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-primary-500 group-hover:translate-x-0.5 flex-shrink-0 transition-all" />
               </Link>
             ))}
           </div>
-        </div>
+        </section>
       </div>
 
-      {/* 매물 목록 섹션 */}
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">추천 매물</h2>
-            <p className="text-gray-600 mt-1">다양한 조건의 매물을 확인해보세요</p>
-          </div>
-          <Link 
-            to="/properties" 
+      {/* 집 찾기 */}
+      <section className="bg-white border border-slate-200 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-semibold text-slate-800 border-b-2 border-primary-500 pb-1 pr-2">집 찾기</h2>
+          <Link
+            to="/properties"
             className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
           >
-            전체 보기
-            <ArrowRight className="w-4 h-4" />
+            전체 보기 <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <div className="flex-1 flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus-within:border-primary-500 focus-within:bg-white transition-colors">
+            <MapPin className="w-5 h-5 text-slate-400 flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="지역 입력 (예: 강남구, 역삼동)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              className="flex-1 min-w-0 outline-none bg-transparent text-slate-800 placeholder-slate-400 text-sm"
+            />
+          </div>
+          <button
+            onClick={handleSearch}
+            className="px-5 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors flex-shrink-0"
+          >
+            <Search className="w-4 h-4" /> 검색
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link to="/properties?leaseType=전세" className="px-3 py-1.5 bg-slate-100 hover:bg-primary-50 text-slate-600 hover:text-primary-700 rounded-md text-sm font-medium transition-colors">
+            전세
+          </Link>
+          <Link to="/properties?leaseType=월세" className="px-3 py-1.5 bg-slate-100 hover:bg-primary-50 text-slate-600 hover:text-primary-700 rounded-md text-sm font-medium transition-colors">
+            월세
+          </Link>
+          <Link to="/properties?parking=true" className="px-3 py-1.5 bg-slate-100 hover:bg-primary-50 text-slate-600 hover:text-primary-700 rounded-md text-sm font-medium transition-colors">
+            주차 가능
+          </Link>
+        </div>
+      </section>
+
+      {/* 알림 */}
+      <section>
+        <h2 className="text-lg font-semibold text-slate-800 border-b-2 border-primary-500 pb-1 pr-2 mb-4 w-fit">알림</h2>
+        <div className="space-y-2">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-3 border-l-4 border-rose-400 hover:shadow-sm transition-shadow">
+            <AlertTriangle className="w-5 h-5 text-rose-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium text-slate-800 text-sm">계약 만료 임박</p>
+              <p className="text-sm text-slate-500">강남구 역삼동 계약 만료일이 2개월 남았습니다. 갱신 여부를 확인하세요.</p>
+            </div>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-3 border-l-4 border-primary-500 hover:shadow-sm transition-shadow">
+            <Bell className="w-5 h-5 text-primary-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium text-slate-800 text-sm">새로운 계약서 점검 결과</p>
+              <p className="text-sm text-slate-500">업로드하신 전세 계약서 점검 결과가 나왔습니다. 지금 확인하세요.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 추천 매물 */}
+      <section>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-semibold text-slate-800 border-b-2 border-primary-500 pb-1 pr-2">추천 매물</h2>
+          <Link to="/properties" className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+            전체 보기 <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
 
         {loadingProperties ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600">매물 목록을 불러오는 중...</p>
+          <div className="text-center py-14 rounded-xl bg-slate-50/50 border border-slate-100">
+            <p className="text-slate-500 text-sm">매물 목록을 불러오는 중...</p>
           </div>
         ) : properties.length === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
-            <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 mb-4">등록된 매물이 없습니다.</p>
-            <Link
-              to="/properties"
-              className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium"
-            >
-              매물 찾기
-              <ArrowRight className="w-4 h-4" />
+          <div className="bg-white border border-slate-200 rounded-xl py-14 text-center">
+            <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-500 text-sm mb-3">등록된 매물이 없습니다.</p>
+            <Link to="/properties" className="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-700 font-medium">
+              매물 찾기 <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {properties.map((property) => (
               <Link
                 key={property.listingId}
                 to={`/properties/${property.listingId}`}
-                className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all group"
+                className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-primary-200 hover:shadow-sm transition-all duration-200 group"
               >
-                <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 relative">
-                  <div className="absolute top-3 left-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      property.leaseType === '전세' 
-                        ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' 
-                        : 'bg-orange-100 text-orange-700 border border-orange-200'
-                    }`}>
-                      {property.leaseType}
-                    </span>
-                  </div>
+                <div className="h-40 bg-slate-100 relative">
+                  <span className={`absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md text-xs font-medium ${
+                    property.leaseType === '전세' ? 'bg-primary-100 text-primary-700' : 'bg-amber-50 text-amber-700'
+                  }`}>
+                    {property.leaseType}
+                  </span>
                 </div>
                 <div className="p-4">
-                  <div className="font-bold text-lg mb-2 text-gray-900 group-hover:text-primary-600 transition-colors">
+                  <p className="font-semibold text-slate-800 mb-1.5 group-hover:text-primary-600 transition-colors">
                     {formatPropertyPrice(property)}
-                  </div>
-                  <div className="text-sm text-gray-600 mb-2 flex items-center gap-1">
-                    <MapPin className="w-4 h-4 text-gray-400" />
+                  </p>
+                  <p className="text-sm text-slate-500 mb-2 flex items-center gap-1 truncate">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                     <span className="truncate">{property.address}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
                     <span>{formatPropertyArea(property.areaM2)}</span>
-                    {property.rooms && (
-                      <span>{property.rooms}룸</span>
-                    )}
+                    {property.rooms != null && <span>{property.rooms}룸</span>}
                   </div>
-                  <div className="flex flex-wrap gap-2 mb-3">
+                  <div className="flex flex-wrap gap-1.5 mb-3">
                     {property.parking && (
-                      <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                        주차
-                      </span>
+                      <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded">주차</span>
                     )}
-                    {property.floor && property.floorBuilding && (
-                      <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">
+                    {property.floor != null && property.floorBuilding != null && (
+                      <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
                         {property.floor}/{property.floorBuilding}층
                       </span>
                     )}
                   </div>
-                  <button className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium transition-colors">
+                  <span className="block w-full py-2 text-center bg-primary-600 text-white rounded-lg text-sm font-medium group-hover:bg-primary-700 transition-colors">
                     상세보기
-                  </button>
+                  </span>
                 </div>
               </Link>
             ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   )
 }
+
+
