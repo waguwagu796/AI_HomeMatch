@@ -9,14 +9,16 @@ export default function ContractReviewUploadPage() {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const consumedAutoOpenRef = useRef(false)
   const [specialTerms, setSpecialTerms] = useState<string[]>([''])
 
   useEffect(() => {
     // 동의 페이지에서 돌아온 직후 파일 선택 다이얼로그 자동 오픈
     const state = location.state as { autoOpenFilePicker?: boolean } | null
-    if (state?.autoOpenFilePicker) {
+    if (!consumedAutoOpenRef.current && state?.autoOpenFilePicker) {
+      consumedAutoOpenRef.current = true
       fileInputRef.current?.click()
-      navigate(location.pathname, { replace: true, state: null })
+      navigate(location.pathname + location.search, { replace: true, state: null })
     }
   }, [location.pathname, location.state, navigate])
 
@@ -163,6 +165,10 @@ export default function ContractReviewUploadPage() {
                 accept="image/*,.pdf"
                 multiple
                 className="hidden"
+                onClick={(e) => {
+                  // programmatic click도 버블링되므로 업로드 박스 onClick으로 전달 방지
+                  e.stopPropagation()
+                }}
                 onChange={(e) => addFiles(Array.from(e.target.files || []))}
               />
             </div>

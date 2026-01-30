@@ -28,16 +28,20 @@ export default function DocumentConsentPage() {
   const returnAction = params.get('return') || ''
   const reason = params.get('reason') || ''
   const version = params.get('version') || DEFAULT_VERSION
+  const rawTypes = params.get('types') || ''
 
   const types = useMemo(() => {
-    const raw = params.get('types')
-    if (!raw) return DEFAULT_TYPES
-    const parsed = raw
+    if (!rawTypes) return DEFAULT_TYPES
+    const parsed = rawTypes
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean)
     return parsed.length ? parsed : DEFAULT_TYPES
-  }, [params])
+  }, [rawTypes])
+
+  // NOTE: `types`는 배열이라 렌더마다 참조가 달라질 수 있어,
+  // effect 의존성에는 문자열 키를 사용해 무한 호출을 방지한다.
+  const typesKey = useMemo(() => types.join(','), [types])
 
   const consentContent = useMemo(() => {
     return [
@@ -76,7 +80,7 @@ export default function DocumentConsentPage() {
         setError(null)
         setAlreadyAgreed(false)
         const res = await fetch(
-          `http://localhost:8080/api/consents/required?types=${encodeURIComponent(types.join(','))}&version=${encodeURIComponent(version)}`,
+          `http://localhost:8080/api/consents/required?types=${encodeURIComponent(typesKey)}&version=${encodeURIComponent(version)}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -90,7 +94,11 @@ export default function DocumentConsentPage() {
           return
         }
 
-        if (!res.ok) return
+        if (!res.ok) {
+          const txt = await res.text().catch(() => '')
+          setError(txt || `동의 상태 확인 실패 (HTTP ${res.status})`)
+          return
+        }
         const data = (await res.json()) as ConsentStatusResponse
         if (data.hasAll) {
           // 업로드 게이트(reason=required)로 들어온 경우엔 이미 동의면 바로 원래 흐름으로 복귀
@@ -107,7 +115,7 @@ export default function DocumentConsentPage() {
     }
 
     void check()
-  }, [navigate, next, reason, types, version])
+  }, [navigate, next, reason, typesKey, version])
 
   const handleAgree = async () => {
     if (!agree) {

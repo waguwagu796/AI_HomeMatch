@@ -103,12 +103,14 @@ export default function DeedAnalysisPage() {
   const [riskExplanation, setRiskExplanation] = useState<string>('')
   const [riskFlags, setRiskFlags] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const consumedAutoOpenRef = useRef(false)
 
   useEffect(() => {
     const state = location.state as { autoOpenFilePicker?: boolean } | null
-    if (view === 'upload' && state?.autoOpenFilePicker) {
+    if (view === 'upload' && !consumedAutoOpenRef.current && state?.autoOpenFilePicker) {
+      consumedAutoOpenRef.current = true
       fileInputRef.current?.click()
-      navigate(location.pathname, { replace: true, state: null })
+      navigate(location.pathname + location.search, { replace: true, state: null })
     }
   }, [location.pathname, location.state, navigate, view])
 
@@ -304,6 +306,10 @@ export default function DeedAnalysisPage() {
                 type="file"
                 accept="image/*,.pdf,application/pdf"
                 className="hidden"
+                onClick={(e) => {
+                  // programmatic click도 버블링되므로 업로드 박스 onClick으로 전달 방지
+                  e.stopPropagation()
+                }}
                 onChange={handleFileChange}
               />
             </div>
@@ -339,7 +345,7 @@ export default function DeedAnalysisPage() {
                   runAnalysis()
                 })()
               }}
-              disabled={uploadedFiles.length === 0 || isAnalyzing}
+              disabled={!uploadedFile || isAnalyzing}
               className="mt-6 w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               {isAnalyzing ? (
