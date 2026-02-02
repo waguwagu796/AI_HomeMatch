@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ShieldCheck } from 'lucide-react' // [수정] FileText 아이콘 제거
+import { ArrowLeft, ShieldCheck } from 'lucide-react'
 
 type ConsentStatusResponse = {
   hasAll: boolean
@@ -40,8 +40,6 @@ export default function DocumentConsentPage() {
     return parsed.length ? parsed : DEFAULT_TYPES
   }, [rawTypes])
 
-  // NOTE: `types`는 배열이라 렌더마다 참조가 달라질 수 있어,
-  // effect 의존성에는 문자열 키를 사용해 무한 호출을 방지한다.
   const typesKey = useMemo(() => types.join(','), [types])
 
   const consentContent = useMemo(() => {
@@ -81,7 +79,9 @@ export default function DocumentConsentPage() {
       setAlreadyAgreed(false)
       try {
         const res = await fetch(
-          `http://localhost:8080/api/consents/required?types=${encodeURIComponent(typesKey)}&version=${encodeURIComponent(version)}`,
+          `http://localhost:8080/api/consents/required?types=${encodeURIComponent(
+            typesKey
+          )}&version=${encodeURIComponent(version)}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -103,7 +103,6 @@ export default function DocumentConsentPage() {
 
         const data = (await res.json()) as ConsentStatusResponse
         if (data.hasAll) {
-          // 업로드 게이트(reason=required)로 들어온 경우엔 이미 동의면 바로 원래 흐름으로 복귀
           if (reason === 'required' && !preview) {
             navigate(next, {
               replace: true,
@@ -115,11 +114,9 @@ export default function DocumentConsentPage() {
             })
             return
           }
-          // 설정/내역 확인으로 들어온 경우엔 내용 확인을 위해 페이지에 머무름
           setAlreadyAgreed(true)
         }
       } catch (e) {
-        // 백엔드 미실행/네트워크 오류 등으로 fetch 자체가 실패하는 경우
         const msg = e instanceof Error ? e.message : '동의 상태 확인에 실패했습니다.'
         setError(
           msg === 'Failed to fetch' || msg.toLowerCase().includes('fetch')
@@ -218,7 +215,8 @@ export default function DocumentConsentPage() {
       <div className="bg-white border rounded-2xl p-6 space-y-5">
         {reason === 'required' && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            문서 업로드/분석을 진행하려면 먼저 <span className="font-semibold">문서 저장 및 분석 처리 동의</span>가 필요합니다.
+            문서 업로드/분석을 진행하려면 먼저{' '}
+            <span className="font-semibold">문서 저장 및 분석 처리 동의</span>가 필요합니다.
           </div>
         )}
 
@@ -243,7 +241,19 @@ export default function DocumentConsentPage() {
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 space-y-4">
           <p className="text-sm font-semibold text-gray-900">동의 내용</p>
 
-          <pre className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{consentContent}</pre>
+          {/* 글씨체/가독성만 개선 */}
+          <pre
+            className="
+              whitespace-pre-wrap
+              font-sans
+              font-normal
+              text-[10px]
+              text-gray-800
+              leading-7
+            "
+          >
+            {consentContent}
+          </pre>
         </div>
 
         <label className="flex items-start gap-3 text-sm">
