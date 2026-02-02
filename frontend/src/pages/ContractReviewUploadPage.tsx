@@ -1,10 +1,11 @@
-import { useRef, useState, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, FileText, Upload } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import SpecialTermsInput from '../components/SpecialTermsInput'
 
 export default function ContractReviewUploadPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -88,6 +89,14 @@ export default function ContractReviewUploadPage() {
     }
   }
 
+  const openFilePicker = async () => {
+    const ok = await ensureDocumentConsent({
+      returnAction: 'filePicker',
+    })
+    if (!ok) return
+    fileInputRef.current?.click()
+  }
+
   const formatBytes = (bytes: number) => {
     if (!Number.isFinite(bytes)) return ''
     if (bytes < 1024) return `${bytes}B`
@@ -157,7 +166,9 @@ export default function ContractReviewUploadPage() {
           {/* 업로드 박스 */}
           <div className="lg:col-span-2">
             <div
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                void openFilePicker()
+              }}
               onDragOver={(e) => {
                 e.preventDefault()
                 setIsDragging(true)
@@ -166,7 +177,11 @@ export default function ContractReviewUploadPage() {
               onDrop={(e) => {
                 e.preventDefault()
                 setIsDragging(false)
-                addFiles(Array.from(e.dataTransfer.files || []))
+                void (async () => {
+                  const ok = await ensureDocumentConsent()
+                  if (!ok) return
+                  addFiles(Array.from(e.dataTransfer.files || []))
+                })()
               }}
               className={`rounded-2xl border-2 border-dashed p-6 sm:p-6 text-center cursor-pointer transition-colors ${isDragging ? 'border-primary-500 bg-primary-50' : 'border-gray-300 hover:border-primary-500'
                 }`}
@@ -187,7 +202,13 @@ export default function ContractReviewUploadPage() {
                   // programmatic click도 버블링되므로 업로드 박스 onClick으로 전달 방지
                   e.stopPropagation()
                 }}
-                onChange={(e) => addFiles(Array.from(e.target.files || []))}
+                onChange={(e) => {
+                  void (async () => {
+                    const ok = await ensureDocumentConsent()
+                    if (!ok) return
+                    addFiles(Array.from(e.target.files || []))
+                  })()
+                }}
               />
             </div>
 

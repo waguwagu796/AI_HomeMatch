@@ -27,6 +27,7 @@ export default function DocumentConsentPage() {
   const context = params.get('context') || 'document'
   const returnAction = params.get('return') || ''
   const reason = params.get('reason') || ''
+  const preview = params.get('preview') === '1' || params.get('preview') === 'true'
   const version = params.get('version') || DEFAULT_VERSION
   const rawTypes = params.get('types') || ''
 
@@ -75,10 +76,10 @@ export default function DocumentConsentPage() {
     }
 
     const check = async () => {
+      setIsChecking(true)
+      setError(null)
+      setAlreadyAgreed(false)
       try {
-        setIsChecking(true)
-        setError(null)
-        setAlreadyAgreed(false)
         const res = await fetch(
           `http://localhost:8080/api/consents/required?types=${encodeURIComponent(typesKey)}&version=${encodeURIComponent(version)}`,
           {
@@ -99,16 +100,32 @@ export default function DocumentConsentPage() {
           setError(txt || `동의 상태 확인 실패 (HTTP ${res.status})`)
           return
         }
+
         const data = (await res.json()) as ConsentStatusResponse
         if (data.hasAll) {
           // 업로드 게이트(reason=required)로 들어온 경우엔 이미 동의면 바로 원래 흐름으로 복귀
-          if (reason === 'required') {
-            navigate(next, { replace: true })
+          if (reason === 'required' && !preview) {
+            navigate(next, {
+              replace: true,
+              state: {
+                consentJustAgreed: false,
+                consentContext: context,
+                autoOpenFilePicker: returnAction === 'filePicker',
+              },
+            })
             return
           }
           // 설정/내역 확인으로 들어온 경우엔 내용 확인을 위해 페이지에 머무름
           setAlreadyAgreed(true)
         }
+      } catch (e) {
+        // 백엔드 미실행/네트워크 오류 등으로 fetch 자체가 실패하는 경우
+        const msg = e instanceof Error ? e.message : '동의 상태 확인에 실패했습니다.'
+        setError(
+          msg === 'Failed to fetch' || msg.toLowerCase().includes('fetch')
+            ? '동의 상태 확인 서버에 연결할 수 없습니다. backend(8080)를 실행한 뒤 다시 시도해 주세요.'
+            : msg
+        )
       } finally {
         setIsChecking(false)
       }
@@ -226,49 +243,7 @@ export default function DocumentConsentPage() {
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 space-y-4">
           <p className="text-sm font-semibold text-gray-900">동의 내용</p>
 
-          <div className="text-sm text-gray-700 space-y-3 leading-relaxed">
-            <p className="font-medium">
-              문서(파일) 저장 및 분석 처리 동의
-            </p>
-
-            <p>
-              Home&apos;Scan은 계약서 및 등기부등본(이미지/PDF) 업로드 및 분석 기능을 제공하며,
-              업로드된 문서는 아래 목적과 범위 내에서 처리·저장됩니다.
-            </p>
-
-            <div>
-              <p className="font-medium">1. 처리 목적</p>
-              <ul className="list-disc list-inside">
-                <li>계약서 및 등기부등본 OCR 및 분석 결과 제공</li>
-                <li>서비스 품질 개선 및 오류 대응 (익명 처리)</li>
-              </ul>
-            </div>
-
-            <div>
-              <p className="font-medium">2. 처리 및 저장 범위</p>
-              <ul className="list-disc list-inside">
-                <li>업로드한 문서 파일(이미지/PDF)</li>
-                <li>문서 분석 과정에서 추출된 텍스트 정보</li>
-              </ul>
-            </div>
-
-            <div>
-              <p className="font-medium">3. 보관 및 삭제</p>
-              <p>문서 보관 및 삭제는 ‘문서 삭제/보관 설정’ 메뉴에서 직접 관리할 수 있습니다.</p>
-            </div>
-
-            <div>
-              <p className="font-medium">4. 유의사항</p>
-              <p>
-                주민등록번호 등 민감한 개인정보가 포함된 문서는
-                업로드 전 가림 처리를 권장드립니다.
-              </p>
-            </div>
-
-            <p className="font-medium text-gray-900">
-              동의하지 않을 경우 문서 업로드 및 분석 기능을 이용하실 수 없습니다.
-            </p>
-          </div>
+          <pre className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{consentContent}</pre>
         </div>
 
         <label className="flex items-start gap-3 text-sm">
