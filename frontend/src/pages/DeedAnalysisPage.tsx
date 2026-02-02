@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Upload,
   ArrowLeft,
@@ -92,8 +92,6 @@ function RiskExplanationBlocks({ text }: { text: string }) {
 }
 
 export default function DeedAnalysisPage() {
-  const navigate = useNavigate()
-  const location = useLocation()
   const [view, setView] = useState<'upload' | 'result'>('upload')
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -287,12 +285,7 @@ export default function DeedAnalysisPage() {
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-4">등기부등본 이미지·PDF 업로드</h2>
             <div
-              onClick={() => {
-                void (async () => {
-                  const ok = await ensureDocumentConsent({ returnAction: 'filePicker' })
-                  if (ok) fileInputRef.current?.click()
-                })()
-              }}
+              onClick={() => fileInputRef.current?.click()}
               className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-primary-500 hover:bg-gray-50/50 transition-colors"
             >
               <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -345,8 +338,8 @@ export default function DeedAnalysisPage() {
                   runAnalysis()
                 })()
               }}
-              disabled={!uploadedFile || isAnalyzing}
-              className="mt-6 w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              disabled={uploadedFiles.length === 0 || isAnalyzing}
+              className="mt-6 w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               {isAnalyzing ? (
                 <>

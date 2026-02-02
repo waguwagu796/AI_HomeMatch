@@ -14,7 +14,6 @@ import MyPage from './pages/MyPage'
 import AdminPage from './pages/AdminPage'
 import Layout from './components/Layout'
 import Signup from './pages/Signup'
-import DocumentConsentPage from './pages/DocumentConsentPage'
 
 function App() {
   return (
@@ -32,7 +31,6 @@ function App() {
       <Route path="/moveout" element={<Layout><MoveOutPage /></Layout>} />
       <Route path="/mypage" element={<Layout><MyPage /></Layout>} />
       <Route path="/admin" element={<Layout><AdminPage /></Layout>} />
-      <Route path="/consents/document" element={<Layout><DocumentConsentPage /></Layout>} />
       <Route path="/signup" element={<Signup />} />
     </Routes>
   )
