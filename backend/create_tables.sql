@@ -286,7 +286,45 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     INDEX idx_created_at (created_at)                         -- 시간순 정렬 조회 성능 최적화 인덱스
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 계약서, 등기부등본 등록 시 동의 테이블 (문서(파일) 처리·저장 동의)
+/* =========================================================
+ * 15. 등기부등본 분석 결과 저장 테이블 (보관/삭제 포함)
+ * ========================================================= */
+CREATE TABLE IF NOT EXISTS deed_analysis_documents (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+
+  user_id INT NOT NULL,
+
+  source_filename VARCHAR(255) NULL,
+  source_mime_type VARCHAR(100) NULL,
+
+  extracted_text LONGTEXT NULL,
+
+  structured_json LONGTEXT NULL,
+  sections_json LONGTEXT NULL,
+
+  risk_flags_json LONGTEXT NULL,
+  check_items_json LONGTEXT NULL,
+  explanation LONGTEXT NULL,
+
+  archived TINYINT(1) NOT NULL DEFAULT 0,
+  deleted_at DATETIME NULL,
+
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  CONSTRAINT fk_deed_doc_user FOREIGN KEY (user_id) REFERENCES users(user_no)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX idx_deed_doc_user_created ON deed_analysis_documents (user_id, created_at);
+CREATE INDEX idx_deed_doc_user_archived ON deed_analysis_documents (user_id, archived);
+CREATE INDEX idx_deed_doc_deleted_at ON deed_analysis_documents (deleted_at);
+
+
+/* =========================================================
+ * 16. 문서처리 동의 사항 저장 테이블
+ * ========================================================= */
 CREATE TABLE IF NOT EXISTS user_consents (
     consent_id INT AUTO_INCREMENT PRIMARY KEY,   -- 동의 이력 ID
     user_no INT NOT NULL,                         -- 사용자 번호 (users.user_no FK)
@@ -306,6 +344,10 @@ CREATE TABLE IF NOT EXISTS user_consents (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+
+/* =========================================================
+ * 매물찾기 더미 데이터 넣기
+ * ========================================================= */
 INSERT INTO listings (
     owner, title, address, lat, lng, price_deposit, lease_type, price_rent, m_cost, 
     area_m2, built_year, floor, floor_building, rooms, bathrooms, parking, move_in_date
@@ -317,6 +359,9 @@ INSERT INTO listings (
 ('최지영', '잠실 신축 아파트', '서울시 송파구 잠실동 345-67', 37.5130, 127.1020, 300000000, '전세', NULL, 200000, 95.00, 2022, 8, 12, 4, 2, TRUE, '2024-09-01'),
 ('오세훈', '구로디지털단지 인근 원룸', '서울시 구로구 구로동 1123-4', 37.4843211, 126.8976543, 120000000, '월세', 650000, 50000, 29.50, 2018, 6, 12, 1, 1, FALSE, '2024-07-05');
 
+/* =========================================================
+ * 17. 계약서 기본정보 테이블
+ * ========================================================= */
 CREATE TABLE IF NOT EXISTS contracts (
   contract_id        BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, -- 문서 ID
   user_id            BIGINT UNSIGNED NOT NULL,                             -- 사용자 ID
@@ -334,7 +379,9 @@ CREATE TABLE IF NOT EXISTS contracts (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
-
+/* =========================================================
+ * 18. 특약사항 분석 결과 테이블
+ * ========================================================= */
 CREATE TABLE IF NOT EXISTS clause_analysis_results (
   clause_analysis_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   contract_id        BIGINT UNSIGNED NOT NULL,

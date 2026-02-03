@@ -13,9 +13,8 @@ import {
   Loader2,
 } from 'lucide-react'
 
-// 개발 시 Vite 프록시 사용: /api/deed → localhost:8000 (core/RAG/api_server.py 실행 필요)
-const DEED_API_URL = import.meta.env.VITE_DEED_API_URL ?? ''
-const DEED_BASE = DEED_API_URL || '/api/deed'
+// 등기부 분석 결과는 Java 백엔드(8080)에 저장합니다.
+const BACKEND_BASE = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:8080'
 
 type CheckStatus = 'ok' | 'caution' | 'danger' | 'pending'
 
@@ -36,27 +35,24 @@ const CHECK_ITEMS_TEMPLATE: CheckItem[] = [
   { id: 6, question: '이 계약, 법적으로 특정이 되는가?', confirmLabel: '호실·목적물 특정 가능 여부', status: 'pending', summary: '' },
 ]
 
-interface UploadResponse {
-  document_id: number
-  extracted_text: string
-  parsed_data: Record<string, unknown>
-  sections: { pyojebu?: string; gapgu?: string; eulgu?: string }
-  regions?: Array<{ bbox: number[][]; text: string; confidence: number }>
-  image_data_url?: string
+interface DeedDocumentDetailResponse {
+  id: number
+  sourceFilename?: string
+  sourceMimeType?: string
+  archived?: boolean
+  createdAt?: string
+
+  extractedText?: string
+  structuredJson?: string
+  sectionsJson?: string
+  riskFlagsJson?: string
+  checkItemsJson?: string
+  explanation?: string
 }
 
 interface CheckItemResponse {
   status: 'ok' | 'caution' | 'danger' | 'pending'
   summary: string
-}
-
-interface RiskAnalysisResponse {
-  success: boolean
-  document_id: number
-  structured: Record<string, unknown>
-  risk_flags: string[]
-  explanation: string
-  check_items?: CheckItemResponse[]  // 6가지 질문별 답변
 }
 
 function StatusBadge({ status }: { status: CheckStatus }) {
@@ -100,7 +96,7 @@ export default function DeedAnalysisPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [checkResults, setCheckResults] = useState<CheckItem[]>(CHECK_ITEMS_TEMPLATE)
-  const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null)
+  const [uploadResult, setUploadResult] = useState<DeedDocumentDetailResponse | null>(null)
   const [riskExplanation, setRiskExplanation] = useState<string>('')
   const [riskFlags, setRiskFlags] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -200,48 +196,43 @@ export default function DeedAnalysisPage() {
     setError(null)
     setIsAnalyzing(true)
     try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        throw new Error('로그인이 필요합니다. 먼저 로그인해 주세요.')
+      }
+
       const form = new FormData()
       form.append('file', uploadedFile)
-      form.append('preprocess', 'doc')
-      form.append('use_llm_correction', 'false')
 
-      const uploadRes = await fetch(`${DEED_BASE}/upload`, {
+      const uploadRes = await fetch(`${BACKEND_BASE}/api/deed/documents`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: form,
       })
       if (!uploadRes.ok) {
         const t = await uploadRes.text()
         throw new Error(t || `업로드 실패 (${uploadRes.status})`)
       }
-      const uploadData: UploadResponse = await uploadRes.json()
-      setUploadResult(uploadData)
+      const saved: DeedDocumentDetailResponse = await uploadRes.json()
+      setUploadResult(saved)
 
-      const riskRes = await fetch(`${DEED_BASE}/documents/${uploadData.document_id}/risk-analysis`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-      if (!riskRes.ok) {
-        const t = await riskRes.text()
-        throw new Error(t || `위험 분석 실패 (${riskRes.status})`)
-      }
-      const riskData: RiskAnalysisResponse = await riskRes.json()
-      setRiskFlags(riskData.risk_flags || [])
-      setRiskExplanation(riskData.explanation || '')
+      // DB에 저장된 JSON 문자열 파싱
+      const parsedRiskFlags: string[] = saved.riskFlagsJson ? JSON.parse(saved.riskFlagsJson) : []
+      const parsedCheckItems: CheckItemResponse[] = saved.checkItemsJson ? JSON.parse(saved.checkItemsJson) : []
+      setRiskFlags(parsedRiskFlags)
+      setRiskExplanation(saved.explanation || '')
 
-      // 백엔드에서 6가지 질문별 답변을 받았으면 그걸 사용, 없으면 기존 로직
-      if (riskData.check_items && riskData.check_items.length === 6) {
-        const items = CHECK_ITEMS_TEMPLATE.map((item, idx) => {
-          const checkItem = riskData.check_items![idx]
-          return {
-            ...item,
-            status: checkItem.status as CheckStatus,
-            summary: checkItem.summary,
-          }
-        })
+      if (parsedCheckItems && parsedCheckItems.length === 6) {
+        const items = CHECK_ITEMS_TEMPLATE.map((item, idx) => ({
+          ...item,
+          status: parsedCheckItems[idx].status as CheckStatus,
+          summary: parsedCheckItems[idx].summary,
+        }))
         setCheckResults(items)
       } else {
-        // 폴백: 기존 로직 (위험 신호를 순서대로 매핑)
-        const flags = riskData.risk_flags || []
+        const flags = parsedRiskFlags || []
         const items = CHECK_ITEMS_TEMPLATE.map((item, idx) => {
           const summary = flags[idx] || (flags.length > 0 ? flags[0] : '분석 완료. 아래 위험 신호 설명을 확인하세요.')
           const status: CheckStatus = flags.length > 0 ? 'caution' : 'ok'
@@ -255,7 +246,7 @@ export default function DeedAnalysisPage() {
       const isNetworkError = msg === 'Failed to fetch' || msg.includes('fetch')
       setError(
         isNetworkError
-          ? '등기 분석 서버에 연결할 수 없습니다. deed-service를 실행한 뒤 다시 시도해 주세요. (프로젝트 폴더의 deed-service에서 python main.py, 포트 8001)'
+          ? '서버에 연결할 수 없습니다. Java 백엔드(8080)와 FastAPI(8000)가 실행 중인지 확인해 주세요.'
           : msg
       )
     } finally {
@@ -409,13 +400,32 @@ export default function DeedAnalysisPage() {
           <div className="grid md:grid-cols-3 gap-6">
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4">등기부등본</h2>
-              {uploadResult?.image_data_url ? (
-                <div className="rounded-lg overflow-hidden border border-gray-200">
-                  <img
-                    src={uploadResult.image_data_url}
-                    alt="등기부등본"
-                    className="w-full max-h-80 object-contain bg-gray-50"
-                  />
+              {uploadResult?.id ? (
+                <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                  {uploadResult.sourceMimeType?.includes('pdf') ? (
+                    <iframe
+                      src={`${BACKEND_BASE}/api/deed/documents/${uploadResult.id}/file`}
+                      className="w-full h-80"
+                      title="등기부 원본(PDF)"
+                    />
+                  ) : (
+                    <img
+                      src={`${BACKEND_BASE}/api/deed/documents/${uploadResult.id}/file`}
+                      alt={uploadResult.sourceFilename || '등기부 원본'}
+                      className="w-full max-h-80 object-contain bg-gray-50"
+                    />
+                  )}
+                  <div className="p-2 text-xs text-gray-600 flex items-center justify-between">
+                    <span className="truncate">{uploadResult.sourceFilename || `문서 #${uploadResult.id}`}</span>
+                    <a
+                      className="text-primary-600 hover:underline flex-shrink-0"
+                      href={`${BACKEND_BASE}/api/deed/documents/${uploadResult.id}/file`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      원본 열기
+                    </a>
+                  </div>
                 </div>
               ) : (
                 uploadedFile && (
@@ -425,14 +435,15 @@ export default function DeedAnalysisPage() {
                       alt={uploadedFile.name}
                       className="w-full max-h-80 object-contain bg-gray-50"
                     />
+                    <p className="p-2 text-xs text-gray-600 truncate">{uploadedFile.name}</p>
                   </div>
                 )
               )}
-              {uploadResult?.extracted_text && (
+              {uploadResult?.extractedText && (
                 <details className="mt-4">
                   <summary className="cursor-pointer text-sm font-medium text-gray-700">추출된 텍스트 보기</summary>
                   <pre className="mt-2 p-3 bg-gray-50 rounded text-xs text-gray-600 overflow-auto max-h-48 whitespace-pre-wrap">
-                    {uploadResult.extracted_text}
+                    {uploadResult.extractedText}
                   </pre>
                 </details>
               )}
