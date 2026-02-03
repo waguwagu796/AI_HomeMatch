@@ -1,8 +1,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import { User, FileText, Trash2, ShieldCheck, FileCheck, Eye, Archive, ArchiveRestore, Loader2 } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-
-const BACKEND_BASE = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:8080'
+import { API_BASE } from '../config'
 
 interface DeedDoc {
   id: number
@@ -92,7 +91,7 @@ export default function MyPage() {
         return
       }
 
-      const response = await fetch('http://localhost:8080/api/user/me', {
+      const response = await fetch(`${API_BASE}/api/user/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -141,7 +140,7 @@ export default function MyPage() {
         return
       }
 
-      const response = await fetch('http://localhost:8080/api/user/me', {
+      const response = await fetch(`${API_BASE}/api/user/me`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -194,7 +193,7 @@ export default function MyPage() {
       }
 
       const res = await fetch(
-        `http://localhost:8080/api/consents/required?types=${encodeURIComponent(DOCUMENT_CONSENT_TYPE)}&version=${encodeURIComponent(DOCUMENT_CONSENT_VERSION)}`,
+        `${API_BASE}/api/consents/required?types=${encodeURIComponent(DOCUMENT_CONSENT_TYPE)}&version=${encodeURIComponent(DOCUMENT_CONSENT_VERSION)}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -254,7 +253,7 @@ export default function MyPage() {
         return
       }
 
-      const res = await fetch('http://localhost:8080/api/consents/withdraw', {
+      const res = await fetch(`${API_BASE}/api/consents/withdraw`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -296,7 +295,7 @@ export default function MyPage() {
     if (!token) return
     setDeedDocsLoading(true)
     try {
-      const res = await fetch(`${BACKEND_BASE}/api/deed/documents`, {
+      const res = await fetch(`${API_BASE}/api/deed/documents`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
@@ -317,7 +316,7 @@ export default function MyPage() {
     if (!token) return
     setDeedDocActionId(id)
     try {
-      const res = await fetch(`${BACKEND_BASE}/api/deed/documents/${id}`, {
+      const res = await fetch(`${API_BASE}/api/deed/documents/${id}`, {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -340,7 +339,7 @@ export default function MyPage() {
     if (!token) return
     setDeedDocActionId(id)
     try {
-      const res = await fetch(`${BACKEND_BASE}/api/deed/documents/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+      const res = await fetch(`${API_BASE}/api/deed/documents/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
       if (res.ok) await loadDeedDocs()
       else alert('삭제에 실패했습니다.')
     } catch {

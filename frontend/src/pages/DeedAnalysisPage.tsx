@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 
 // 등기부 분석 결과는 Java 백엔드(8080)에 저장합니다.
-const BACKEND_BASE = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:8080'
+import { API_BASE } from '../config'
 
 type CheckStatus = 'ok' | 'caution' | 'danger' | 'pending'
 
@@ -121,7 +121,7 @@ export default function DeedAnalysisPage() {
     const token = localStorage.getItem('accessToken')
     if (!token) return
     loadedDocumentIdRef.current = documentId
-    fetch(`${BACKEND_BASE}/api/deed/documents/${documentId}`, {
+    fetch(`${API_BASE}/api/deed/documents/${documentId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
@@ -168,7 +168,7 @@ export default function DeedAnalysisPage() {
       return
     }
     let cancelled = false
-    fetch(`${BACKEND_BASE}/api/deed/documents/${docId}/file`, {
+    fetch(`${API_BASE}/api/deed/documents/${docId}/file`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
@@ -212,7 +212,7 @@ export default function DeedAnalysisPage() {
 
     try {
       const res = await fetch(
-        `http://localhost:8080/api/consents/required?types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent('v1.0')}`,
+        `${API_BASE}/api/consents/required?types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent('v1.0')}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -289,7 +289,7 @@ export default function DeedAnalysisPage() {
       const form = new FormData()
       form.append('file', uploadedFile)
 
-      const uploadRes = await fetch(`${BACKEND_BASE}/api/deed/documents`, {
+      const uploadRes = await fetch(`${API_BASE}/api/deed/documents`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

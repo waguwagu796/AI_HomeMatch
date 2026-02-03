@@ -1,16 +1,17 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { 
-  FileText, 
-  FileCheck, 
-  AlertTriangle, 
-  Search, 
-  Building2, 
+import {
+  FileText,
+  FileCheck,
+  AlertTriangle,
+  Search,
+  Building2,
   ArrowRight,
   Bell,
   MapPin,
-  Calendar
+  Calendar,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { API_BASE } from '../config'
 
 interface RecentViewedProperty {
   listingId: number
@@ -105,7 +106,7 @@ export default function HomePage() {
   const fetchProperties = async () => {
     try {
       setLoadingProperties(true)
-      const response = await fetch('http://localhost:8080/api/listings?limit=12')
+      const response = await fetch(`${API_BASE}/api/listings?limit=12`)
       
       if (!response.ok) {
         throw new Error('매물 목록을 불러오는데 실패했습니다.')

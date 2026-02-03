@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { MapPin } from 'lucide-react'
 import { useParams } from 'react-router-dom'
+import { API_BASE } from '../config'
 
 interface ListingDetail {
   listingId: number
@@ -51,7 +52,7 @@ export default function PropertyDetailPage() {
   const fetchListingDetail = async (listingId: number) => {
     try {
       setLoading(true)
-      const response = await fetch(`http://localhost:8080/api/listings/${listingId}`)
+      const response = await fetch(`${API_BASE}/api/listings/${listingId}`)
       if (!response.ok) {
         throw new Error('매물 정보를 불러오는데 실패했습니다.')
       }

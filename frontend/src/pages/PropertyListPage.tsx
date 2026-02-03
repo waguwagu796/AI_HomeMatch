@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { ChevronDown, Search, SlidersHorizontal, MapPin, Home, DollarSign, Calendar, Shield, Heart } from 'lucide-react'
+import { API_BASE } from '../config'
 
 interface Listing {
   listingId: number
@@ -126,7 +127,7 @@ export default function PropertyListPage() {
         params.append('maxArea', filters.maxArea.toString())
       }
       
-      const url = `http://localhost:8080/api/listings${params.toString() ? '?' + params.toString() : ''}`
+      const url = `${API_BASE}/api/listings${params.toString() ? '?' + params.toString() : ''}`
       const response = await fetch(url)
       
       if (!response.ok) {

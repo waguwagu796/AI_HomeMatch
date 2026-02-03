@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, FileText, Upload } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import SpecialTermsInput from '../components/SpecialTermsInput'
+import { API_BASE } from '../config'
 
 type UploadLocationState = {
   autoOpenFilePicker?: boolean
@@ -49,7 +50,7 @@ export default function ContractReviewUploadPage() {
 
     try {
       const res = await fetch(
-        `http://localhost:8080/api/consents/required?types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent('v1.0')}`,
+        `${API_BASE}/api/consents/required?types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent('v1.0')}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

@@ -10,6 +10,7 @@ import {
   ArrowLeft,
 } from 'lucide-react'
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
+import { API_BASE } from '../config'
 
 type FileMeta = {
   fileName?: string | null
@@ -109,7 +110,7 @@ export default function ContractReviewDetailPage() {
     const t0 = performance.now()
 
     try {
-      const res = await fetch(`http://localhost:8080/api/contract/check`, {
+      const res = await fetch(`${API_BASE}/api/contract/check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clauses, strict: false }),
@@ -157,7 +158,7 @@ export default function ContractReviewDetailPage() {
     const token = localStorage.getItem('accessToken')
     if (!token) throw new Error('로그인이 필요합니다.')
 
-    const res = await fetch('http://localhost:8080/api/contracts', {
+    const res = await fetch(`${API_BASE}/api/contracts`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -219,7 +220,7 @@ export default function ContractReviewDetailPage() {
       }
     })
 
-    const res = await fetch(`http://localhost:8080/api/contracts/${contractId}/clause-analysis-results:bulk`, {
+    const res = await fetch(`${API_BASE}/api/contracts/${contractId}/clause-analysis-results:bulk`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
