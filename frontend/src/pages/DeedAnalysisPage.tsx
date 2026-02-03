@@ -27,12 +27,12 @@ interface CheckItem {
 }
 
 const CHECK_ITEMS_TEMPLATE: CheckItem[] = [
-  { id: 1, question: '이 사람이 진짜 주인인가?', confirmLabel: '소유자 일치 여부', status: 'pending', summary: '' },
-  { id: 2, question: '보증금보다 먼저 가져갈 권리가 있는가?', confirmLabel: '근저당·가압류 등 권리 존재', status: 'pending', summary: '' },
-  { id: 3, question: '이 집, 왜 이렇게 최근에 손바뀜 됐지?', confirmLabel: '소유권 이전 시점', status: 'pending', summary: '' },
-  { id: 4, question: '나 말고 계약 권한 있는 사람이 또 있나?', confirmLabel: '공동 소유 여부', status: 'pending', summary: '' },
-  { id: 5, question: '내 보증금은 몇 번째 순서인가?', confirmLabel: '선순위 권리 구조', status: 'pending', summary: '' },
-  { id: 6, question: '이 계약, 법적으로 특정이 되는가?', confirmLabel: '호실·목적물 특정 가능 여부', status: 'pending', summary: '' },
+  { id: 1, question: '소유자 확인', confirmLabel: '등기상 소유자 정보', status: 'pending', summary: '' },
+  { id: 2, question: '선순위 권리', confirmLabel: '근저당, 가압류 등 선순위 권리', status: 'pending', summary: '' },
+  { id: 3, question: '소유권 변동 이력', confirmLabel: '소유권 이전 시점 및 빈도', status: 'pending', summary: '' },
+  { id: 4, question: '공동 소유', confirmLabel: '공동 소유자 및 계약 동의 필요 여부', status: 'pending', summary: '' },
+  { id: 5, question: '보증금 보호', confirmLabel: '선·후순위 권리 구조', status: 'pending', summary: '' },
+  { id: 6, question: '계약 제한 사항', confirmLabel: '효력 제한, 목적물 특정 가능 여부', status: 'pending', summary: '' },
 ]
 
 interface DeedDocumentDetailResponse {
@@ -357,17 +357,35 @@ export default function DeedAnalysisPage() {
           </div>
 
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-3">확인할 6가지 (본질)</h3>
-            <ul className="space-y-2 text-sm text-gray-700">
+            <div className="mb-4">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">등기부등본 핵심 점검 항목 6가지</h3>
+              <p className="text-sm text-gray-600">
+                등기부등본을 AI로 분석해 계약 전 반드시 확인해야 할 주요 항목을 점검합니다.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
               {CHECK_ITEMS_TEMPLATE.map((item) => (
-                <li key={item.id} className="flex items-center gap-2">
-                  <span className="text-primary-600 font-medium">✓</span>
-                  <span className="font-medium">{item.question}</span>
-                  <span className="text-gray-500">→</span>
-                  <span className="text-gray-600">{item.confirmLabel}</span>
-                </li>
+                <div
+                  key={item.id}
+                  className="border border-gray-200 rounded-lg p-4 hover:border-primary-300 hover:shadow-sm transition-all bg-gray-50/50"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
+                      <span className="text-primary-600 font-bold text-sm">{item.id}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gray-900 mb-1 text-sm leading-snug">
+                        {item.question}
+                      </h4>
+                      <div className="mt-2 px-3 py-1.5 bg-white rounded border border-gray-200">
+                        <div className="text-xs text-gray-500 mb-1">확인 항목</div>
+                        <div className="text-sm font-medium text-gray-800">{item.confirmLabel}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         </>
       )}
