@@ -11,6 +11,8 @@ export default function ContractReviewUploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const consumedAutoOpenRef = useRef(false)
   const [specialTerms, setSpecialTerms] = useState<string[]>([''])
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   useEffect(() => {
     // 동의 페이지에서 돌아온 직후 파일 선택 다이얼로그 자동 오픈
@@ -120,25 +122,75 @@ export default function ContractReviewUploadPage() {
   )
   const isAnalyzeDisabled = uploadedFiles.length === 0 && !hasSpecialTerm
 
-  // ✅ 분석 시작: 여기서는 API 호출하지 않고, detail로 이동만 한다.
-  // (detail에서 스피너/경과시간 + API 호출)
-  const handleStartAnalyze = () => {
+  // ✅ 분석 시작: 파일 업로드 및 DB 저장 후 detail로 이동
+  const handleStartAnalyze = async () => {
     if (isAnalyzeDisabled) return
 
     const finalSpecialTerms = specialTerms
       .map((t) => t.trim())
       .filter((t) => t !== '')
 
-    const reviewId = Date.now()
-    const startedAt = Date.now()
+    // 파일이 없고 특약만 있는 경우는 기존 로직 유지
+    if (uploadedFiles.length === 0) {
+      const reviewId = Date.now()
+      const startedAt = Date.now()
+      navigate(`/contract/review/detail?reviewId=${reviewId}`, {
+        state: {
+          reviewId,
+          startedAt,
+          specialTerms: finalSpecialTerms,
+        },
+      })
+      return
+    }
 
-    navigate(`/contract/review/detail?reviewId=${reviewId}`, {
-      state: {
-        reviewId,
-        startedAt,
-        specialTerms: finalSpecialTerms,
-      },
-    })
+    setIsUploading(true)
+    setUploadError(null)
+
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        throw new Error('로그인이 필요합니다.')
+      }
+
+      // 모든 파일을 한 번에 업로드 (하나의 레코드에 저장)
+      const formData = new FormData()
+      uploadedFiles.forEach((file) => {
+        formData.append('files', file)
+      })
+      formData.append('specialTerms', JSON.stringify(finalSpecialTerms))
+
+      const response = await fetch('http://localhost:8080/api/contract/review/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: '업로드 실패' }))
+        throw new Error(errorData.error || '파일 업로드에 실패했습니다.')
+      }
+
+      await response.json()
+
+      // 업로드 성공 후 분석 페이지로 이동
+      const reviewId = Date.now()
+      const startedAt = Date.now()
+      navigate(`/contract/review/detail?reviewId=${reviewId}`, {
+        state: {
+          reviewId,
+          startedAt,
+          specialTerms: finalSpecialTerms,
+        },
+      })
+    } catch (error) {
+      console.error('업로드 오류:', error)
+      setUploadError(error instanceof Error ? error.message : '파일 업로드 중 오류가 발생했습니다.')
+    } finally {
+      setIsUploading(false)
+    }
   }
 
 
@@ -274,12 +326,18 @@ export default function ContractReviewUploadPage() {
           <SpecialTermsInput terms={specialTerms} setTerms={setSpecialTerms} />
         </div>
 
+        {uploadError && (
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm">
+            {uploadError}
+          </div>
+        )}
+
         <button
           onClick={handleStartAnalyze}
-          disabled={isAnalyzeDisabled}
+          disabled={isAnalyzeDisabled || isUploading}
           className="mt-6 w-full rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
-          분석 시작하기
+          {isUploading ? '업로드 중...' : '분석 시작하기'}
         </button>
       </div>
     </div>
