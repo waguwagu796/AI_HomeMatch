@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import type { ChangeEvent } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Upload,
   ArrowLeft,
@@ -88,6 +89,8 @@ function RiskExplanationBlocks({ text }: { text: string }) {
 }
 
 export default function DeedAnalysisPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [view, setView] = useState<'upload' | 'result'>('upload')
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -97,8 +100,92 @@ export default function DeedAnalysisPage() {
   const [riskExplanation, setRiskExplanation] = useState<string>('')
   const [riskFlags, setRiskFlags] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const consumedAutoOpenRef = useRef(false)
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    const state = location.state as { autoOpenFilePicker?: boolean } | null
+    if (view === 'upload' && !consumedAutoOpenRef.current && state?.autoOpenFilePicker) {
+      consumedAutoOpenRef.current = true
+      fileInputRef.current?.click()
+      navigate(location.pathname + location.search, { replace: true, state: null })
+    }
+  }, [location.pathname, location.state, navigate, view])
+
+  const ensureDocumentConsent = async (options?: {
+    returnAction?: 'filePicker'
+    alertMessage?: string
+  }) => {
+    const token = localStorage.getItem('accessToken')
+    if (!token) {
+      navigate('/login')
+      return false
+    }
+
+    const alertMessage =
+      options?.alertMessage ??
+      '계약서 및 등기부등본 업로드·분석 기능을 이용하려면, 문서 저장 및 분석 처리에 대한 사전 동의가 필요합니다. \n\n동의 페이지로 이동합니다.'
+
+    try {
+      const res = await fetch(
+        `http://localhost:8080/api/consents/required?types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent('v1.0')}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+
+      if (res.status === 401) {
+        navigate('/login')
+        return false
+      }
+
+      if (!res.ok) {
+        alert(alertMessage)
+        navigate(
+          `/consents/document?reason=required&types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent(
+            'v1.0'
+          )}&context=${encodeURIComponent('deed')}&next=${encodeURIComponent(location.pathname)}${
+            options?.returnAction ? `&return=${encodeURIComponent(options.returnAction)}` : ''
+          }`
+        )
+        return false
+      }
+      const data = (await res.json()) as { hasAll: boolean; missingTypes: string[] }
+      if (data.hasAll) return true
+
+      alert(alertMessage)
+      navigate(
+        `/consents/document?reason=required&types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent('v1.0')}&context=${encodeURIComponent(
+          'deed'
+        )}&next=${encodeURIComponent(location.pathname)}${
+          options?.returnAction ? `&return=${encodeURIComponent(options.returnAction)}` : ''
+        }`
+      )
+      return false
+    } catch {
+      alert(alertMessage)
+      navigate(
+        `/consents/document?reason=required&types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent('v1.0')}&context=${encodeURIComponent(
+          'deed'
+        )}&next=${encodeURIComponent(location.pathname)}${
+          options?.returnAction ? `&return=${encodeURIComponent(options.returnAction)}` : ''
+        }`
+      )
+      return false
+    }
+  }
+
+  const openFilePicker = async () => {
+    const ok = await ensureDocumentConsent({
+      returnAction: 'filePicker',
+    })
+    if (!ok) return
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = (e.target.files || [])[0]
     if (file) setUploadedFile(file)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -200,7 +287,9 @@ export default function DeedAnalysisPage() {
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-4">등기부등본 이미지·PDF 업로드</h2>
             <div
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                void openFilePicker()
+              }}
               className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-primary-500 hover:bg-gray-50/50 transition-colors"
             >
               <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -214,6 +303,10 @@ export default function DeedAnalysisPage() {
                 type="file"
                 accept="image/*,.pdf,application/pdf"
                 className="hidden"
+                onClick={(e) => {
+                  // programmatic click도 버블링되므로 업로드 박스 onClick으로 전달 방지
+                  e.stopPropagation()
+                }}
                 onChange={handleFileChange}
               />
             </div>
@@ -242,7 +335,13 @@ export default function DeedAnalysisPage() {
 
             <button
               type="button"
-              onClick={runAnalysis}
+              onClick={() => {
+                void (async () => {
+                  const ok = await ensureDocumentConsent()
+                  if (!ok) return
+                  void runAnalysis()
+                })()
+              }}
               disabled={!uploadedFile || isAnalyzing}
               className="mt-6 w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >

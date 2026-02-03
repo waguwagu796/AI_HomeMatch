@@ -7,12 +7,17 @@ import requests
 API_URL = "http://127.0.0.1:8000/analyze"
 
 REQUIRED_KEYS = [
+    "level",
+    "color",
     "conclusion",
     "risk_points",
-    "law_basis",
-    "precedent_basis",
     "mediation_cases",
-    "recommended_clauses",
+    "mediation_case_ids",
+    "precedents",
+    "precedent_ids",
+    "laws",
+    "law_ids",
+    "recommendations",
 ]
 
 

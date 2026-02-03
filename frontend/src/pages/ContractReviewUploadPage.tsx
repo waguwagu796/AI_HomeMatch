@@ -1,14 +1,101 @@
-import { useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, FileText, Upload } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import SpecialTermsInput from '../components/SpecialTermsInput'
 
 export default function ContractReviewUploadPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const consumedAutoOpenRef = useRef(false)
   const [specialTerms, setSpecialTerms] = useState<string[]>([''])
+
+  useEffect(() => {
+    // 동의 페이지에서 돌아온 직후 파일 선택 다이얼로그 자동 오픈
+    const state = location.state as { autoOpenFilePicker?: boolean } | null
+    if (!consumedAutoOpenRef.current && state?.autoOpenFilePicker) {
+      consumedAutoOpenRef.current = true
+      fileInputRef.current?.click()
+      navigate(location.pathname + location.search, { replace: true, state: null })
+    }
+  }, [location.pathname, location.state, navigate])
+
+  const ensureDocumentConsent = async (options?: {
+    returnAction?: 'filePicker'
+    alertMessage?: string
+  }) => {
+    const token = localStorage.getItem('accessToken')
+    if (!token) {
+      navigate('/login')
+      return false
+    }
+
+    const alertMessage =
+      options?.alertMessage ??
+      '계약서 및 등기부등본 업로드·분석 기능을 이용하려면, 문서 저장 및 분석 처리에 대한 사전 동의가 필요합니다. \n\n동의 페이지로 이동합니다.'
+
+    try {
+      const res = await fetch(
+        `http://localhost:8080/api/consents/required?types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent('v1.0')}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+
+      if (res.status === 401) {
+        navigate('/login')
+        return false
+      }
+
+      if (!res.ok) {
+        alert(alertMessage)
+        navigate(
+          `/consents/document?reason=required&types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent(
+            'v1.0'
+          )}&context=${encodeURIComponent('contract')}&next=${encodeURIComponent(location.pathname)}${
+            options?.returnAction ? `&return=${encodeURIComponent(options.returnAction)}` : ''
+          }`
+        )
+        return false
+      }
+      const data = (await res.json()) as { hasAll: boolean; missingTypes: string[] }
+      if (data.hasAll) return true
+
+      alert(alertMessage)
+      navigate(
+        `/consents/document?reason=required&types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent('v1.0')}&context=${encodeURIComponent(
+          'contract'
+        )}&next=${encodeURIComponent(location.pathname)}${
+          options?.returnAction ? `&return=${encodeURIComponent(options.returnAction)}` : ''
+        }`
+      )
+      return false
+    } catch {
+      // 네트워크/서버 오류 시에도 안전하게 동의 페이지로 유도
+      alert(alertMessage)
+      navigate(
+        `/consents/document?reason=required&types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent('v1.0')}&context=${encodeURIComponent(
+          'contract'
+        )}&next=${encodeURIComponent(location.pathname)}${
+          options?.returnAction ? `&return=${encodeURIComponent(options.returnAction)}` : ''
+        }`
+      )
+      return false
+    }
+  }
+
+  const openFilePicker = async () => {
+    const ok = await ensureDocumentConsent({
+      returnAction: 'filePicker',
+    })
+    if (!ok) return
+    fileInputRef.current?.click()
+  }
 
   const formatBytes = (bytes: number) => {
     if (!Number.isFinite(bytes)) return ''
@@ -25,6 +112,35 @@ export default function ContractReviewUploadPage() {
     if (!files.length) return
     setUploadedFiles((prev) => [...prev, ...files])
   }
+
+  // ✅ 버튼 활성화 조건: "파일 OR 특약" 중 하나라도 있으면 활성화
+  const hasSpecialTerm = useMemo(
+    () => specialTerms.some((v) => v.trim().length > 0),
+    [specialTerms]
+  )
+  const isAnalyzeDisabled = uploadedFiles.length === 0 && !hasSpecialTerm
+
+  // ✅ 분석 시작: 여기서는 API 호출하지 않고, detail로 이동만 한다.
+  // (detail에서 스피너/경과시간 + API 호출)
+  const handleStartAnalyze = () => {
+    if (isAnalyzeDisabled) return
+
+    const finalSpecialTerms = specialTerms
+      .map((t) => t.trim())
+      .filter((t) => t !== '')
+
+    const reviewId = Date.now()
+    const startedAt = Date.now()
+
+    navigate(`/contract/review/detail?reviewId=${reviewId}`, {
+      state: {
+        reviewId,
+        startedAt,
+        specialTerms: finalSpecialTerms,
+      },
+    })
+  }
+
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -50,7 +166,9 @@ export default function ContractReviewUploadPage() {
           {/* 업로드 박스 */}
           <div className="lg:col-span-2">
             <div
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                void openFilePicker()
+              }}
               onDragOver={(e) => {
                 e.preventDefault()
                 setIsDragging(true)
@@ -59,11 +177,14 @@ export default function ContractReviewUploadPage() {
               onDrop={(e) => {
                 e.preventDefault()
                 setIsDragging(false)
-                addFiles(Array.from(e.dataTransfer.files || []))
+                void (async () => {
+                  const ok = await ensureDocumentConsent()
+                  if (!ok) return
+                  addFiles(Array.from(e.dataTransfer.files || []))
+                })()
               }}
-              className={`rounded-2xl border-2 border-dashed p-6 sm:p-6 text-center cursor-pointer transition-colors ${
-                isDragging ? 'border-primary-500 bg-primary-50' : 'border-gray-300 hover:border-primary-500'
-              }`}
+              className={`rounded-2xl border-2 border-dashed p-6 sm:p-6 text-center cursor-pointer transition-colors ${isDragging ? 'border-primary-500 bg-primary-50' : 'border-gray-300 hover:border-primary-500'
+                }`}
             >
               <Upload className="w-8 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-900 font-semibold mb-1">파일을 끌어다 놓거나 선택하세요</p>
@@ -77,7 +198,17 @@ export default function ContractReviewUploadPage() {
                 accept="image/*,.pdf"
                 multiple
                 className="hidden"
-                onChange={(e) => addFiles(Array.from(e.target.files || []))}
+                onClick={(e) => {
+                  // programmatic click도 버블링되므로 업로드 박스 onClick으로 전달 방지
+                  e.stopPropagation()
+                }}
+                onChange={(e) => {
+                  void (async () => {
+                    const ok = await ensureDocumentConsent()
+                    if (!ok) return
+                    addFiles(Array.from(e.target.files || []))
+                  })()
+                }}
               />
             </div>
 
@@ -144,16 +275,8 @@ export default function ContractReviewUploadPage() {
         </div>
 
         <button
-          onClick={() => {
-            // 빈 문자열은 저장/전송 대상에서 제외
-            const finalSpecialTerms = specialTerms.filter((t) => t.trim() !== '')
-            // TODO: 실제 분석 API 연동 시, 생성된 reviewId로 이동
-            const simulatedReviewId = Date.now()
-            navigate(`/contract/review/detail?reviewId=${simulatedReviewId}`, {
-              state: { specialTerms: finalSpecialTerms },
-            })
-          }}
-          disabled={uploadedFiles.length === 0}
+          onClick={handleStartAnalyze}
+          disabled={isAnalyzeDisabled}
           className="mt-6 w-full rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           분석 시작하기
