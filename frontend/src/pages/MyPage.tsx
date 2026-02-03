@@ -9,6 +9,29 @@ interface UserData {
   phone: string
 }
 
+interface DeedDocListItem {
+  id: number
+  sourceFilename?: string
+  sourceMimeType?: string
+  archived?: boolean
+  createdAt?: string
+  riskFlagsJson?: string
+}
+
+interface DeedDocDetail {
+  id: number
+  sourceFilename?: string
+  sourceMimeType?: string
+  archived?: boolean
+  createdAt?: string
+  extractedText?: string
+  structuredJson?: string
+  sectionsJson?: string
+  riskFlagsJson?: string
+  checkItemsJson?: string
+  explanation?: string
+}
+
 export default function MyPage() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('profile')
@@ -21,9 +44,20 @@ export default function MyPage() {
     phone: ''
   })
 
+  const [deedDocsActive, setDeedDocsActive] = useState<DeedDocListItem[]>([])
+  const [deedDocsArchived, setDeedDocsArchived] = useState<DeedDocListItem[]>([])
+  const [deedDocsLoading, setDeedDocsLoading] = useState(false)
+  const [selectedDeedDoc, setSelectedDeedDoc] = useState<DeedDocDetail | null>(null)
+
   useEffect(() => {
     loadUserData()
   }, [])
+
+  useEffect(() => {
+    if (activeTab === 'settings') {
+      void loadDeedDocuments()
+    }
+  }, [activeTab])
 
   const loadUserData = async () => {
     try {
@@ -124,6 +158,89 @@ export default function MyPage() {
     }
   }
 
+  const loadDeedDocuments = async () => {
+    try {
+      setDeedDocsLoading(true)
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        navigate('/login')
+        return
+      }
+
+      const [activeRes, archivedRes] = await Promise.all([
+        fetch('http://localhost:8080/api/deed/documents?archived=false', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        }),
+        fetch('http://localhost:8080/api/deed/documents?archived=true', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        }),
+      ])
+
+      if (!activeRes.ok || !archivedRes.ok) {
+        throw new Error('등기부 분석 문서 목록을 불러오지 못했습니다.')
+      }
+
+      const activeData: DeedDocListItem[] = await activeRes.json()
+      const archivedData: DeedDocListItem[] = await archivedRes.json()
+      setDeedDocsActive(activeData || [])
+      setDeedDocsArchived(archivedData || [])
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setDeedDocsLoading(false)
+    }
+  }
+
+  const openDeedDoc = async (id: number) => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        navigate('/login')
+        return
+      }
+      const res = await fetch(`http://localhost:8080/api/deed/documents/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('문서 상세 조회 실패')
+      const detail: DeedDocDetail = await res.json()
+      setSelectedDeedDoc(detail)
+    } catch (e) {
+      alert('문서 상세를 불러오지 못했습니다.')
+    }
+  }
+
+  const setArchived = async (id: number, archived: boolean) => {
+    const token = localStorage.getItem('accessToken')
+    if (!token) {
+      navigate('/login')
+      return
+    }
+    await fetch(`http://localhost:8080/api/deed/documents/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ archived }),
+    })
+    await loadDeedDocuments()
+  }
+
+  const deleteDoc = async (id: number) => {
+    const ok = confirm('이 문서를 삭제할까요? (복구 불가)')
+    if (!ok) return
+    const token = localStorage.getItem('accessToken')
+    if (!token) {
+      navigate('/login')
+      return
+    }
+    await fetch(`http://localhost:8080/api/deed/documents/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+    await loadDeedDocuments()
+  }
+
   const tabs = [
     { id: 'profile', label: '프로필 관리', icon: User },
     { id: 'documents', label: '데이터 출처 및 면책 안내', icon: FileText },
@@ -158,6 +275,64 @@ export default function MyPage() {
 
       {/* Main Content */}
       <div className="flex-1 bg-white border border-gray-200 rounded-lg p-6">
+        {selectedDeedDoc && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg w-full max-w-3xl max-h-[85vh] overflow-auto p-6">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="min-w-0">
+                  <h3 className="text-lg font-bold text-gray-900 truncate">
+                    {selectedDeedDoc.sourceFilename || `문서 #${selectedDeedDoc.id}`}
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">{selectedDeedDoc.createdAt || ''}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDeedDoc(null)}
+                  className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  닫기
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">위험 신호(요약)</h4>
+                  <pre className="p-3 bg-gray-50 rounded text-xs text-gray-700 overflow-auto whitespace-pre-wrap">
+                    {selectedDeedDoc.riskFlagsJson || ''}
+                  </pre>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">6가지 결과</h4>
+                  <pre className="p-3 bg-gray-50 rounded text-xs text-gray-700 overflow-auto whitespace-pre-wrap">
+                    {selectedDeedDoc.checkItemsJson || ''}
+                  </pre>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">설명</h4>
+                  <pre className="p-3 bg-gray-50 rounded text-xs text-gray-700 overflow-auto whitespace-pre-wrap">
+                    {selectedDeedDoc.explanation || ''}
+                  </pre>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                    href={`http://localhost:8080/api/deed/documents/${selectedDeedDoc.id}/file`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    원본 파일 열기
+                  </a>
+                </div>
+                <details>
+                  <summary className="cursor-pointer text-sm font-medium text-gray-700">추출된 원문 텍스트 보기</summary>
+                  <pre className="mt-2 p-3 bg-gray-50 rounded text-xs text-gray-700 overflow-auto whitespace-pre-wrap max-h-64">
+                    {selectedDeedDoc.extractedText || ''}
+                  </pre>
+                </details>
+              </div>
+            </div>
+          </div>
+        )}
         {activeTab === 'profile' && (
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">프로필 관리</h2>
@@ -270,10 +445,97 @@ export default function MyPage() {
                 </select>
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 mb-2">보관 문서 목록</h3>
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <p className="text-sm text-gray-600">보관 중인 문서가 없습니다.</p>
-                </div>
+                <h3 className="font-bold text-gray-900 mb-2">등기부등본 분석 문서</h3>
+
+                {deedDocsLoading ? (
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <p className="text-sm text-gray-600">불러오는 중...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">최근 분석 문서</h4>
+                      <div className="border border-gray-200 rounded-lg divide-y">
+                        {deedDocsActive.length === 0 ? (
+                          <div className="p-4 text-sm text-gray-600">문서가 없습니다.</div>
+                        ) : (
+                          deedDocsActive.map((d) => (
+                            <div key={d.id} className="p-4 flex items-start justify-between gap-4">
+                              <div className="min-w-0">
+                                <p className="font-medium text-gray-900 truncate">{d.sourceFilename || `문서 #${d.id}`}</p>
+                                <p className="text-xs text-gray-500 mt-1">{d.createdAt || ''}</p>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => openDeedDoc(d.id)}
+                                  className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                                >
+                                  보기
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setArchived(d.id, true)}
+                                  className="px-3 py-1.5 text-sm border border-amber-300 text-amber-700 rounded hover:bg-amber-50"
+                                >
+                                  보관
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteDoc(d.id)}
+                                  className="px-3 py-1.5 text-sm border border-red-300 text-red-700 rounded hover:bg-red-50"
+                                >
+                                  삭제
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">보관 문서</h4>
+                      <div className="border border-gray-200 rounded-lg divide-y">
+                        {deedDocsArchived.length === 0 ? (
+                          <div className="p-4 text-sm text-gray-600">보관 중인 문서가 없습니다.</div>
+                        ) : (
+                          deedDocsArchived.map((d) => (
+                            <div key={d.id} className="p-4 flex items-start justify-between gap-4">
+                              <div className="min-w-0">
+                                <p className="font-medium text-gray-900 truncate">{d.sourceFilename || `문서 #${d.id}`}</p>
+                                <p className="text-xs text-gray-500 mt-1">{d.createdAt || ''}</p>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => openDeedDoc(d.id)}
+                                  className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                                >
+                                  보기
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setArchived(d.id, false)}
+                                  className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                                >
+                                  보관 해제
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteDoc(d.id)}
+                                  className="px-3 py-1.5 text-sm border border-red-300 text-red-700 rounded hover:bg-red-50"
+                                >
+                                  삭제
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
