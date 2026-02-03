@@ -32,3 +32,8 @@ jwt:
 
 fastapi:
   base-url: http://localhost:8000
+
+# 등기부등본 등 업로드 파일 저장 경로 (상대 또는 절대)
+app:
+  images:
+    base-dir: ${IMAGES_BASE_DIR:images}

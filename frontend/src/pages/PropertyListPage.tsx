@@ -6,6 +6,7 @@ interface Listing {
   listingId: number
   title: string
   address: string
+  imageUrl: string | null
   priceDeposit: number
   leaseType: string
   priceRent: number | null
@@ -497,7 +498,17 @@ export default function PropertyListPage() {
                   to={`/properties/${property.listingId}`}
                   className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
                 >
-                  <div className="h-48 bg-gray-200"></div>
+                  <div className="h-48 bg-gray-200 overflow-hidden">
+                    {property.imageUrl ? (
+                      <img
+                        src={property.imageUrl}
+                        alt={property.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">이미지 없음</div>
+                    )}
+                  </div>
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${badgeColors.green}`}>

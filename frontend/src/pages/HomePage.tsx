@@ -19,6 +19,7 @@ interface RecentViewedProperty {
     listingId: number
     title: string
     address: string
+    imageUrl: string | null
     priceDeposit: number
     leaseType: string
     priceRent: number | null
@@ -34,6 +35,7 @@ interface Listing {
   listingId: number
   title: string
   address: string
+  imageUrl: string | null
   priceDeposit: number
   leaseType: string
   priceRent: number | null
@@ -227,7 +229,13 @@ export default function HomePage() {
                     to={`/properties/${view.listingId}`}
                     className="group rounded-lg bg-white overflow-hidden border border-gray-200 hover:border-primary-300 hover:shadow-md transition-all"
                   >
-                    <div className="h-24 bg-gradient-to-br from-gray-100 to-gray-200" />
+                    <div className="h-24 bg-gray-200 overflow-hidden">
+                      {view.data.imageUrl ? (
+                        <img src={view.data.imageUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200" />
+                      )}
+                    </div>
                     <div className="p-3">
                       <div className="text-[11px] text-gray-500 mb-1 truncate">
                         {getAddressParts(view.data.address)}
@@ -457,7 +465,12 @@ export default function HomePage() {
                 to={`/properties/${property.listingId}`}
                 className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all group"
               >
-                <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 relative">
+                <div className="h-48 bg-gray-200 relative overflow-hidden">
+                  {property.imageUrl ? (
+                    <img src={property.imageUrl} alt={property.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200" />
+                  )}
                   <div className="absolute top-3 left-3">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                       property.leaseType === '전세' 
