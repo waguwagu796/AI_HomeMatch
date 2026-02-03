@@ -2,7 +2,7 @@
 /* =========================================================
  * 1. 사용자 정보 테이블
  * ========================================================= */
-create table users (
+create table IF NOT EXISTS users (
     user_no int auto_increment primary key,
     email varchar(255) unique not null,
     password varchar(255) not null,
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS entry_status_records (
 /* =========================================================
  * 4. 퇴실 전 해야 할 필수 항목 관리 테이블
  * ========================================================= */
-CREATE TABLE moveout_checklists (
+CREATE TABLE IF NOT EXISTS moveout_checklists (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,          -- 체크리스트 항목 ID
     user_id INT NOT NULL,                           -- 사용자 ID
     checklist_type VARCHAR(20) NOT NULL,            -- 체크리스트 유형 (MOVE_OUT, RESTORATION)
@@ -91,7 +91,7 @@ CREATE TABLE moveout_checklists (
 /* =========================================================
  * 5. 보증금 정산 / 반환 상태 관리 테이블
  * ========================================================= */
-CREATE TABLE deposit_managements (
+CREATE TABLE IF NOT EXISTS deposit_managements (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,          -- 보증금 관리 ID
     user_id INT NOT NULL,                           -- 사용자 ID
     deposit_amount DECIMAL(15,2) NOT NULL,          -- 보증금 총액
@@ -117,7 +117,7 @@ CREATE TABLE deposit_managements (
 /* =========================================================
  * 6. 퇴실 직전 집 상태 증빙용 사진 테이블
  * ========================================================= */
-CREATE TABLE moveout_photos (
+CREATE TABLE IF NOT EXISTS moveout_photos (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     photo_url VARCHAR(500) NOT NULL,
@@ -134,7 +134,7 @@ CREATE TABLE moveout_photos (
 /* =========================================================
  * 7. 보증금, 시설 훼손 등 분쟁 발생 시 기록
  * ========================================================= */
-CREATE TABLE dispute_records (
+CREATE TABLE IF NOT EXISTS dispute_records (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,          -- 분쟁 기록 ID
     user_id INT NOT NULL,                           -- 사용자 ID
     dispute_type VARCHAR(50) NOT NULL,              -- 분쟁 유형
@@ -157,7 +157,7 @@ CREATE TABLE dispute_records (
 /* =========================================================
  * 8. 내용증명, 지급명령 등 보증금 관련 이벤트 로그
  * ========================================================= */
-CREATE TABLE deposit_return_history (
+CREATE TABLE IF NOT EXISTS deposit_return_history (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,          -- 이력 ID
     deposit_management_id BIGINT NOT NULL,          -- 보증금 관리 ID
     action_type VARCHAR(50) NOT NULL,               -- 액션 유형 (NOTICE_SENT 등)
@@ -286,3 +286,76 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 계약서, 등기부등본 등록 시 동의 테이블 (문서(파일) 처리·저장 동의)
+CREATE TABLE IF NOT EXISTS user_consents (
+    consent_id INT AUTO_INCREMENT PRIMARY KEY,   -- 동의 이력 ID
+    user_no INT NOT NULL,                         -- 사용자 번호 (users.user_no FK)
+
+    consent_type VARCHAR(50) NOT NULL,            -- 동의 유형 (TERMS, PRIVACY, DATA_STORE, DISCLAIMER)
+    consent_content TEXT NOT NULL,                -- 동의 문서 내용
+    content_hash CHAR(64) NOT NULL,               -- 동의 문서 변경 여부 확인용 값 (SHA-256)
+
+    version VARCHAR(20) NOT NULL,                 -- 약관/동의 버전
+
+    agreed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- 동의 시점
+    withdrawn_at DATETIME NULL,                   -- 철회 시점 (NULL = 현재 유효)
+
+    CONSTRAINT fk_user_consents_user
+        FOREIGN KEY (user_no)
+        REFERENCES users(user_no)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO listings (
+    owner, title, address, lat, lng, price_deposit, lease_type, price_rent, m_cost, 
+    area_m2, built_year, floor, floor_building, rooms, bathrooms, parking, move_in_date
+) VALUES
+('홍길동', '강남역 도보 5분 원룸', '서울시 강남구 역삼동 123-45', 37.5000, 127.0360, 250000000, '전세', NULL, 50000, 33.00, 2020, 5, 10, 1, 1, TRUE, '2024-07-01'),
+('김철수', '반포동 고급 아파트', '서울시 서초구 반포동 456-78', 37.5040, 127.0020, 100000000, '월세', 1000000, 150000, 84.00, 2015, 15, 20, 3, 2, TRUE, '2024-08-01'),
+('이영희', '여의도 오피스텔', '서울시 영등포구 여의도동 789-12', 37.5260, 126.9250, 180000000, '전세', NULL, 80000, 45.00, 2018, 12, 15, 2, 1, FALSE, '2024-06-15'),
+('박민수', '홍대입구 근처 원룸', '서울시 마포구 홍익동 234-56', 37.5560, 126.9230, 150000000, '월세', 800000, 60000, 28.00, 2019, 3, 5, 1, 1, TRUE, '2024-07-20'),
+('최지영', '잠실 신축 아파트', '서울시 송파구 잠실동 345-67', 37.5130, 127.1020, 300000000, '전세', NULL, 200000, 95.00, 2022, 8, 12, 4, 2, TRUE, '2024-09-01'),
+('오세훈', '구로디지털단지 인근 원룸', '서울시 구로구 구로동 1123-4', 37.4843211, 126.8976543, 120000000, '월세', 650000, 50000, 29.50, 2018, 6, 12, 1, 1, FALSE, '2024-07-05');
+
+CREATE TABLE IF NOT EXISTS contracts (
+  contract_id        BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, -- 문서 ID
+  user_id            BIGINT UNSIGNED NOT NULL,                             -- 사용자 ID
+  file_name          VARCHAR(255) NULL,                                    -- 파일 명 (현재 null 가능)
+  mime_type          VARCHAR(100) NULL,                                    -- MIME 타입
+  file_size_bytes    BIGINT NULL,                                          -- 파일 크기
+  uploaded_at        DATETIME NULL,                                        -- 업로드 일시
+  contract_alias     VARCHAR(100) NOT NULL,                                -- 계약서 별명 (테스트 입력)
+  special_term_count INT NOT NULL DEFAULT 0,                               -- 특약사항 갯수
+  created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                     ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_contracts_user_id (user_id),
+  KEY idx_contracts_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+CREATE TABLE IF NOT EXISTS clause_analysis_results (
+  clause_analysis_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  contract_id        BIGINT UNSIGNED NOT NULL,
+  clause_index       INT NOT NULL,                     
+  clause_text        LONGTEXT NOT NULL,                
+  level              ENUM('SAFE','NEEDS_UNDERSTANDING','NEEDS_REVIEW') NOT NULL,
+  conclusion         TEXT NULL,
+  risk_points        JSON NULL,            
+  mediation_summaries TEXT NULL,            
+  mediation_case_ids  JSON NULL,            
+  precedent_summaries TEXT NULL,            
+  precedent_case_ids  JSON NULL,            
+  precedent_evidence  JSON NULL,            
+  law_summaries       TEXT NULL,            
+  law_ids             JSON NULL,           
+  recommended_clause_text LONGTEXT NULL,
+  created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY ux_clause_contract_idx (contract_id, clause_index),
+  KEY idx_clause_contract_id (contract_id),
+  KEY idx_clause_level (level),
+  CONSTRAINT fk_clause_contract
+    FOREIGN KEY (contract_id) REFERENCES contracts(contract_id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

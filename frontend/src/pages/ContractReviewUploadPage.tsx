@@ -3,6 +3,16 @@ import { ArrowLeft, FileText, Upload } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import SpecialTermsInput from '../components/SpecialTermsInput'
 
+type UploadLocationState = {
+  autoOpenFilePicker?: boolean
+}
+
+type FileMeta = {
+  fileName?: string | null
+  mimeType?: string | null
+  fileSizeBytes?: number | null
+}
+
 export default function ContractReviewUploadPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -13,14 +23,13 @@ export default function ContractReviewUploadPage() {
   const [specialTerms, setSpecialTerms] = useState<string[]>([''])
 
   useEffect(() => {
-    // 동의 페이지에서 돌아온 직후 파일 선택 다이얼로그 자동 오픈
-    const state = location.state as { autoOpenFilePicker?: boolean } | null
+    const state = (location.state as UploadLocationState | null) ?? null
     if (!consumedAutoOpenRef.current && state?.autoOpenFilePicker) {
       consumedAutoOpenRef.current = true
       fileInputRef.current?.click()
       navigate(location.pathname + location.search, { replace: true, state: null })
     }
-  }, [location.pathname, location.state, navigate])
+  }, [location.pathname, location.search, location.state, navigate])
 
   const ensureDocumentConsent = async (options?: {
     returnAction?: 'filePicker'
@@ -57,32 +66,29 @@ export default function ContractReviewUploadPage() {
         navigate(
           `/consents/document?reason=required&types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent(
             'v1.0'
-          )}&context=${encodeURIComponent('contract')}&next=${encodeURIComponent(location.pathname)}${
-            options?.returnAction ? `&return=${encodeURIComponent(options.returnAction)}` : ''
+          )}&context=${encodeURIComponent('contract')}&next=${encodeURIComponent(location.pathname)}${options?.returnAction ? `&return=${encodeURIComponent(options.returnAction)}` : ''
           }`
         )
         return false
       }
+
       const data = (await res.json()) as { hasAll: boolean; missingTypes: string[] }
       if (data.hasAll) return true
 
       alert(alertMessage)
       navigate(
-        `/consents/document?reason=required&types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent('v1.0')}&context=${encodeURIComponent(
-          'contract'
-        )}&next=${encodeURIComponent(location.pathname)}${
-          options?.returnAction ? `&return=${encodeURIComponent(options.returnAction)}` : ''
+        `/consents/document?reason=required&types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent(
+          'v1.0'
+        )}&context=${encodeURIComponent('contract')}&next=${encodeURIComponent(location.pathname)}${options?.returnAction ? `&return=${encodeURIComponent(options.returnAction)}` : ''
         }`
       )
       return false
     } catch {
-      // 네트워크/서버 오류 시에도 안전하게 동의 페이지로 유도
       alert(alertMessage)
       navigate(
-        `/consents/document?reason=required&types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent('v1.0')}&context=${encodeURIComponent(
-          'contract'
-        )}&next=${encodeURIComponent(location.pathname)}${
-          options?.returnAction ? `&return=${encodeURIComponent(options.returnAction)}` : ''
+        `/consents/document?reason=required&types=${encodeURIComponent('DATA_STORE')}&version=${encodeURIComponent(
+          'v1.0'
+        )}&context=${encodeURIComponent('contract')}&next=${encodeURIComponent(location.pathname)}${options?.returnAction ? `&return=${encodeURIComponent(options.returnAction)}` : ''
         }`
       )
       return false
@@ -90,9 +96,7 @@ export default function ContractReviewUploadPage() {
   }
 
   const openFilePicker = async () => {
-    const ok = await ensureDocumentConsent({
-      returnAction: 'filePicker',
-    })
+    const ok = await ensureDocumentConsent({ returnAction: 'filePicker' })
     if (!ok) return
     fileInputRef.current?.click()
   }
@@ -113,34 +117,35 @@ export default function ContractReviewUploadPage() {
     setUploadedFiles((prev) => [...prev, ...files])
   }
 
-  // ✅ 버튼 활성화 조건: "파일 OR 특약" 중 하나라도 있으면 활성화
-  const hasSpecialTerm = useMemo(
-    () => specialTerms.some((v) => v.trim().length > 0),
-    [specialTerms]
-  )
+  const hasSpecialTerm = useMemo(() => specialTerms.some((v) => v.trim().length > 0), [specialTerms])
   const isAnalyzeDisabled = uploadedFiles.length === 0 && !hasSpecialTerm
 
-  // ✅ 분석 시작: 여기서는 API 호출하지 않고, detail로 이동만 한다.
-  // (detail에서 스피너/경과시간 + API 호출)
   const handleStartAnalyze = () => {
     if (isAnalyzeDisabled) return
 
-    const finalSpecialTerms = specialTerms
-      .map((t) => t.trim())
-      .filter((t) => t !== '')
+    const finalSpecialTerms = specialTerms.map((t) => t.trim()).filter((t) => t !== '')
 
     const reviewId = Date.now()
     const startedAt = Date.now()
+
+    const firstFile = uploadedFiles[0]
+    const fileMeta: FileMeta | null = firstFile
+      ? {
+        fileName: firstFile.name ?? null,
+        mimeType: firstFile.type ?? null,
+        fileSizeBytes: Number.isFinite(firstFile.size) ? firstFile.size : null,
+      }
+      : null
 
     navigate(`/contract/review/detail?reviewId=${reviewId}`, {
       state: {
         reviewId,
         startedAt,
         specialTerms: finalSpecialTerms,
+        fileMeta,
       },
     })
   }
-
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -163,12 +168,9 @@ export default function ContractReviewUploadPage() {
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8">
         <div className="grid gap-4 lg:grid-cols-3">
-          {/* 업로드 박스 */}
           <div className="lg:col-span-2">
             <div
-              onClick={() => {
-                void openFilePicker()
-              }}
+              onClick={() => void openFilePicker()}
               onDragOver={(e) => {
                 e.preventDefault()
                 setIsDragging(true)
@@ -198,10 +200,7 @@ export default function ContractReviewUploadPage() {
                 accept="image/*,.pdf"
                 multiple
                 className="hidden"
-                onClick={(e) => {
-                  // programmatic click도 버블링되므로 업로드 박스 onClick으로 전달 방지
-                  e.stopPropagation()
-                }}
+                onClick={(e) => e.stopPropagation()}
                 onChange={(e) => {
                   void (async () => {
                     const ok = await ensureDocumentConsent()
@@ -212,7 +211,6 @@ export default function ContractReviewUploadPage() {
               />
             </div>
 
-            {/* 업로드된 파일 목록 */}
             {uploadedFiles.length > 0 && (
               <div className="mt-6">
                 <div className="flex items-center justify-between gap-3">
@@ -232,7 +230,8 @@ export default function ContractReviewUploadPage() {
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
                           <p className="text-xs text-gray-500">
-                            {formatBytes(file.size)}{file.type ? ` · ${file.type}` : ''}
+                            {formatBytes(file.size)}
+                            {file.type ? ` · ${file.type}` : ''}
                           </p>
                         </div>
                       </div>
@@ -250,7 +249,6 @@ export default function ContractReviewUploadPage() {
             )}
           </div>
 
-          {/* 우측 안내 */}
           <div className="space-y-3">
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
               <div className="text-sm font-semibold text-gray-900 mb-1">업로드 팁</div>
@@ -269,7 +267,6 @@ export default function ContractReviewUploadPage() {
           </div>
         </div>
 
-        {/* 특약 입력 (분석 시작하기 버튼 위) */}
         <div className="mt-6">
           <SpecialTermsInput terms={specialTerms} setTerms={setSpecialTerms} />
         </div>
@@ -285,4 +282,3 @@ export default function ContractReviewUploadPage() {
     </div>
   )
 }
-
