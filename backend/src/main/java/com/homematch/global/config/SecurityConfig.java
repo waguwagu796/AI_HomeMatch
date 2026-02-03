@@ -24,6 +24,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final SimpleCorsFilter simpleCorsFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -86,7 +87,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .anyRequest().permitAll()
-            );
+            )
+            .addFilterBefore(simpleCorsFilter, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.class);
 
         return http.build();
     }
