@@ -21,6 +21,8 @@ export default function ContractReviewUploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const consumedAutoOpenRef = useRef(false)
   const [specialTerms, setSpecialTerms] = useState<string[]>([''])
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   useEffect(() => {
     const state = (location.state as UploadLocationState | null) ?? null
@@ -125,8 +127,19 @@ export default function ContractReviewUploadPage() {
 
     const finalSpecialTerms = specialTerms.map((t) => t.trim()).filter((t) => t !== '')
 
-    const reviewId = Date.now()
-    const startedAt = Date.now()
+    // 파일이 없고 특약만 있는 경우는 기존 로직 유지
+    if (uploadedFiles.length === 0) {
+      const reviewId = Date.now()
+      const startedAt = Date.now()
+      navigate(`/contract/review/detail?reviewId=${reviewId}`, {
+        state: {
+          reviewId,
+          startedAt,
+          specialTerms: finalSpecialTerms,
+        },
+      })
+      return
+    }
 
     const firstFile = uploadedFiles[0]
     const fileMeta: FileMeta | null = firstFile
@@ -271,12 +284,18 @@ export default function ContractReviewUploadPage() {
           <SpecialTermsInput terms={specialTerms} setTerms={setSpecialTerms} />
         </div>
 
+        {uploadError && (
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm">
+            {uploadError}
+          </div>
+        )}
+
         <button
           onClick={handleStartAnalyze}
-          disabled={isAnalyzeDisabled}
+          disabled={isAnalyzeDisabled || isUploading}
           className="mt-6 w-full rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
-          분석 시작하기
+          {isUploading ? '업로드 중...' : '분석 시작하기'}
         </button>
       </div>
     </div>
