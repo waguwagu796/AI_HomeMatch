@@ -1,5 +1,6 @@
 server:
-  port: 8080
+  # Cloudtype 등 PaaS는 PORT 환경 변수로 포트 지정 → 없으면 8080
+  port: ${PORT:8080}
 
 spring:
   datasource:
