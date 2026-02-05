@@ -31,8 +31,9 @@ jwt:
   secret: my-super-secret-key-my-super-secret-key
   expiration: 3600000 # 1시간 (ms)
 
+# 등기부등본 AI 분석용 FastAPI. 비우면 업로드/저장만 하고 분석은 생략. 로컬에서 분석 쓰려면 FASTAPI_BASE_URL=http://localhost:8000 설정
 fastapi:
-  base-url: http://localhost:8000
+  base-url: ${FASTAPI_BASE_URL:}
 
 # 등기부등본 등 업로드 파일 저장 경로 (상대 또는 절대)
 app:
