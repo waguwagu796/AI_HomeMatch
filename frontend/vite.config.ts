@@ -9,11 +9,8 @@ export default defineConfig(({ mode }) => {
   const proxy: Record<string, { target: string; changeOrigin: boolean; rewrite?: (path: string) => string }> = {}
 
   if (backendUrl) {
-    // 배포 백엔드(Cloudtype 등) 사용 시: /api 전부(등기부등본 포함) Java 백엔드로
-    proxy['/api'] = {
-      target: backendUrl,
-      changeOrigin: true,
-    }
+    // 배포 백엔드(Cloudtype 등) 사용 시: /api 전부 해당 URL로
+    proxy['/api'] = { target: backendUrl, changeOrigin: true }
   } else {
     // 로컬 개발 시: 등기부등본만 FastAPI(8000), 나머지 /api는 Java 로컬(8080)로
     proxy['/api/deed'] = {
