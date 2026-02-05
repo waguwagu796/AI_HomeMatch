@@ -15,11 +15,15 @@ export default defineConfig(({ mode }) => {
       changeOrigin: true,
     }
   } else {
-    // 로컬 개발 시: 등기부등본만 FastAPI(8000), 나머지 /api는 별도 설정 시 Java 로컬로
+    // 로컬 개발 시: 등기부등본만 FastAPI(8000), 나머지 /api는 Java 로컬(8080)로
     proxy['/api/deed'] = {
       target: 'http://localhost:8000',
       changeOrigin: true,
       rewrite: (path) => path.replace(/^\/api\/deed/, ''),
+    }
+    proxy['/api'] = {
+      target: 'http://localhost:8080',
+      changeOrigin: true,
     }
   }
 
