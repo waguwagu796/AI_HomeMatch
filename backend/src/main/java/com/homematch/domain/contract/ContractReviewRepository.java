@@ -16,3 +16,4 @@ public interface ContractReviewRepository extends JpaRepository<ContractReview, 
     Optional<ContractReview> findByUserNoAndId(@Param("userNo") Integer userNo, @Param("id") Long id);
 }
 
+

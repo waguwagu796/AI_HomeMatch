@@ -385,25 +385,22 @@ CREATE TABLE IF NOT EXISTS contracts (
 
 /* =========================================================
  * 18. 특약사항 분석 결과 테이블
- * - level: 애플리케이션 ContractLevel enum과 동일 (SAFE, NEEDS_UNDERSTANDING, NEEDS_REVIEW)
- * - clause_text: NOT NULL, 빈 문자열 허용 (null 전달 시 애플리케이션에서 ''로 저장)
- * - (contract_id, clause_index): 동일 계약 재저장 시 기존 행 삭제 후 삽입
  * ========================================================= */
 CREATE TABLE IF NOT EXISTS clause_analysis_results (
   clause_analysis_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   contract_id        BIGINT UNSIGNED NOT NULL,
-  clause_index       INT NOT NULL,
-  clause_text        LONGTEXT NOT NULL,
+  clause_index       INT NOT NULL,                     
+  clause_text        LONGTEXT NOT NULL,                
   level              ENUM('SAFE','NEEDS_UNDERSTANDING','NEEDS_REVIEW') NOT NULL,
   conclusion         TEXT NULL,
-  risk_points        JSON NULL,
-  mediation_summaries TEXT NULL,
-  mediation_case_ids  JSON NULL,
-  precedent_summaries TEXT NULL,
-  precedent_case_ids  JSON NULL,
-  precedent_evidence  JSON NULL,
-  law_summaries       TEXT NULL,
-  law_ids             JSON NULL,
+  risk_points        JSON NULL,            
+  mediation_summaries TEXT NULL,            
+  mediation_case_ids  JSON NULL,            
+  precedent_summaries TEXT NULL,            
+  precedent_case_ids  JSON NULL,            
+  precedent_evidence  JSON NULL,            
+  law_summaries       TEXT NULL,            
+  law_ids             JSON NULL,           
   recommended_clause_text LONGTEXT NULL,
   created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY ux_clause_contract_idx (contract_id, clause_index),
