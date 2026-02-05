@@ -15,3 +15,4 @@ public class ContractReviewRequest {
     private List<String> specialTerms;
 }
 
+
