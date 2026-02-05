@@ -9,18 +9,11 @@ export default defineConfig(({ mode }) => {
   const proxy: Record<string, { target: string; changeOrigin: boolean; rewrite?: (path: string) => string }> = {}
 
   if (backendUrl) {
-    // 배포 백엔드(Cloudtype 등) 사용 시: /api 전부(등기부등본 포함) Java 백엔드로
-    proxy['/api'] = {
-      target: backendUrl,
-      changeOrigin: true,
-    }
+    // 배포 백엔드(Cloudtype 등) 사용 시: /api 전부 해당 URL로
+    proxy['/api'] = { target: backendUrl, changeOrigin: true }
   } else {
-    // 로컬 개발 시: 등기부등본만 FastAPI(8000), 나머지 /api는 별도 설정 시 Java 로컬로
-    proxy['/api/deed'] = {
-      target: 'http://localhost:8000',
-      changeOrigin: true,
-      rewrite: (path) => path.replace(/^\/api\/deed/, ''),
-    }
+    // 로컬 개발 시: /api 전부 로컬 Java(8080)로. 등기부등본은 Java가 내부에서 FastAPI(8000) 호출
+    proxy['/api'] = { target: 'http://localhost:8080', changeOrigin: true }
   }
 
   return {
