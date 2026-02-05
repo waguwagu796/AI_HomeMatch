@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Download, Info, FileText, Scale, Check, X, Calendar } from 'lucide-react'
 import './MoveOutPage.css'
+import { API_BASE } from '../config'
 
 interface EntryStatusRecord {
   id: string
@@ -214,7 +215,7 @@ export default function MoveOutPage() {
       const token = localStorage.getItem('accessToken')
       if (!token) return null
 
-      const response = await fetch('http://localhost:8080/api/moveout/checklists', {
+      const response = await fetch(`${API_BASE}/api/moveout/checklists`, {
         headers: getAuthHeaders()
       })
 
@@ -240,7 +241,7 @@ export default function MoveOutPage() {
       }
 
       setIsLoading(true)
-      const response = await fetch(`http://localhost:8080/api/moveout/checklists/${id}`, {
+      const response = await fetch(`${API_BASE}/api/moveout/checklists/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ isCompleted })
@@ -298,7 +299,7 @@ export default function MoveOutPage() {
 
       // 체크리스트 생성 (순차적으로 실행)
       for (const item of moveOutItems) {
-        await fetch('http://localhost:8080/api/moveout/checklists', {
+        await fetch(`${API_BASE}/api/moveout/checklists`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({
@@ -310,7 +311,7 @@ export default function MoveOutPage() {
       }
 
       for (const item of restorationItems) {
-        await fetch('http://localhost:8080/api/moveout/checklists', {
+        await fetch(`${API_BASE}/api/moveout/checklists`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({
@@ -337,7 +338,7 @@ export default function MoveOutPage() {
       const token = localStorage.getItem('accessToken')
       if (!token) return
 
-      const response = await fetch('http://localhost:8080/api/moveout/entry-status-records', {
+      const response = await fetch(`${API_BASE}/api/moveout/entry-status-records`, {
         headers: getAuthHeaders()
       })
 

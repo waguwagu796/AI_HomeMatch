@@ -58,20 +58,29 @@ public class DeedService {
         User user = userRepository.findById(userNo)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        JsonNode upload = deedFastApiClient.upload(file);
-        long fastapiDocumentId = upload.path("document_id").asLong();
-        String extractedText = upload.path("extracted_text").asText("");
-        JsonNode sections = upload.path("sections");
-        String sectionsJson = sections.isMissingNode() ? null : sections.toString();
+        String extractedText = null;
+        String sectionsJson = null;
+        String structuredJson = null;
+        String riskFlagsJson = null;
+        String checkItemsJson = null;
+        String explanation = null;
 
-        JsonNode risk = deedFastApiClient.riskAnalysis(fastapiDocumentId);
-        JsonNode structured = risk.path("structured");
-        String structuredJson = structured.isMissingNode() ? null : structured.toString();
-        String riskFlagsJson = risk.path("risk_flags").isMissingNode() ? null : risk.path("risk_flags").toString();
-        String checkItemsJson = risk.path("check_items").isMissingNode() ? null : risk.path("check_items").toString();
-        String explanation = risk.path("explanation").asText(null);
+        if (deedFastApiClient.isEnabled()) {
+            JsonNode upload = deedFastApiClient.upload(file);
+            long fastapiDocumentId = upload.path("document_id").asLong();
+            extractedText = upload.path("extracted_text").asText("");
+            JsonNode sections = upload.path("sections");
+            sectionsJson = sections.isMissingNode() ? null : sections.toString();
 
-        // 1) 먼저 DB에 메타만 저장하여 id 확보
+            JsonNode risk = deedFastApiClient.riskAnalysis(fastapiDocumentId);
+            JsonNode structured = risk.path("structured");
+            structuredJson = structured.isMissingNode() ? null : structured.toString();
+            riskFlagsJson = risk.path("risk_flags").isMissingNode() ? null : risk.path("risk_flags").toString();
+            checkItemsJson = risk.path("check_items").isMissingNode() ? null : risk.path("check_items").toString();
+            explanation = risk.path("explanation").asText(null);
+        }
+
+        // 1) DB에 메타 저장 (분석 결과 있으면 포함, 없으면 null)
         DeedAnalysisDocument saved = repository.save(
                 DeedAnalysisDocument.builder()
                         .user(user)
