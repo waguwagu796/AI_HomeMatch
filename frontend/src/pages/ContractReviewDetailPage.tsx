@@ -23,6 +23,7 @@ type DetailLocationState = {
   startedAt?: number
   specialTerms: string[]
   fileMeta?: FileMeta | null
+  contractAlias?: string
 }
 
 type AnswerJson = {
@@ -75,6 +76,7 @@ export default function ContractReviewDetailPage() {
   const reviewId = state.reviewId ?? Number(searchParams.get('reviewId') || 0)
   const specialTerms = Array.isArray(state.specialTerms) ? state.specialTerms : []
   const fileMeta = state.fileMeta ?? null
+  const contractAliasFromState = state.contractAlias ?? null
 
   const [selectedClause, setSelectedClause] = useState(0)
 
@@ -193,14 +195,14 @@ export default function ContractReviewDetailPage() {
         (aj?.precedent_ids ?? (aj?.precedents ?? []).map((p) => p.source_id)).filter(Boolean) as string[]
       const precedentEvidence = (aj?.precedents ?? [])
         .flatMap((p) => p.evidence_paragraphs ?? [])
-        .filter(Boolean)
+        .filter((x): x is string => typeof x === 'string' && x.trim() !== '')
 
       const lawSummaries = (aj?.laws ?? []).map((l) => l.summary ?? '').filter(Boolean)
       const lawIds = (aj?.law_ids ?? (aj?.laws ?? []).map((l) => l.source_id)).filter(Boolean) as string[]
 
       return {
-        clauseIndex: r.index,
-        clauseText: r.clause,
+        clauseIndex: r.index ?? 0,
+        clauseText: (r.clause != null && String(r.clause).trim() !== '') ? String(r.clause) : '',
         level: toContractLevel(aj?.level),
         conclusion: aj?.conclusion ?? null,
 
@@ -244,7 +246,7 @@ export default function ContractReviewDetailPage() {
       setSaving(true)
       setSaveError(null)
 
-      const contractAlias = `계약서_${reviewId || Date.now()}`
+      const contractAlias = (contractAliasFromState?.trim() || `계약서_${reviewId || Date.now()}`)
       const specialTermCount = analysisResults.length
 
       const { contractId } = await createContract({
