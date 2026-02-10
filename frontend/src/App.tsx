@@ -5,12 +5,16 @@ import HomePage from './pages/HomePage'
 import PropertyListPage from './pages/PropertyListPage'
 import PropertyDetailPage from './pages/PropertyDetailPage'
 import ContractReviewPage from './pages/ContractReviewPage'
-import ContractDiscrepancyPage from './pages/ContractDiscrepancyPage'
+import ContractReviewUploadPage from './pages/ContractReviewUploadPage'
+import ContractReviewDetailPage from './pages/ContractReviewDetailPage'
+import DeedAnalysisPage from './pages/DeedAnalysisPage'
+import DocumentConsentPage from './pages/DocumentConsentPage'
 import ResidencyManagementPage from './pages/ResidencyManagementPage'
 import MoveOutPage from './pages/MoveOutPage'
-import ChatbotPage from './pages/ChatbotPage'
 import MyPage from './pages/MyPage'
+import AdminPage from './pages/AdminPage'
 import Layout from './components/Layout'
+import Signup from './pages/Signup'
 
 function App() {
   return (
@@ -21,11 +25,15 @@ function App() {
       <Route path="/properties" element={<Layout><PropertyListPage /></Layout>} />
       <Route path="/properties/:id" element={<Layout><PropertyDetailPage /></Layout>} />
       <Route path="/contract/review" element={<Layout><ContractReviewPage /></Layout>} />
-      <Route path="/contract/discrepancy" element={<Layout><ContractDiscrepancyPage /></Layout>} />
+      <Route path="/contract/review/upload" element={<Layout><ContractReviewUploadPage /></Layout>} />
+      <Route path="/contract/review/detail" element={<Layout><ContractReviewDetailPage /></Layout>} />
+      <Route path="/contract/deed" element={<Layout><DeedAnalysisPage /></Layout>} />
+      <Route path="/consents/document" element={<Layout><DocumentConsentPage /></Layout>} />
       <Route path="/residency" element={<Layout><ResidencyManagementPage /></Layout>} />
       <Route path="/moveout" element={<Layout><MoveOutPage /></Layout>} />
-      <Route path="/chatbot" element={<Layout><ChatbotPage /></Layout>} />
       <Route path="/mypage" element={<Layout><MyPage /></Layout>} />
+      <Route path="/admin" element={<Layout><AdminPage /></Layout>} />
+      <Route path="/signup" element={<Signup />} />
     </Routes>
   )
 }

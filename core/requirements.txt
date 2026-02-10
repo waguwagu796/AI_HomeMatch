@@ -1,6 +1,22 @@
 ipykernel
-pytesseract
-pillow
 pymupdf
 pymysql
 python-dotenv
+chromadb
+sentence-transformers
+langchain-core
+langchain-text-splitters
+groq
+langsmith
+
+# FastAPI
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+
+easyocr
+numpy
+opencv-python-headless
+
+openai
