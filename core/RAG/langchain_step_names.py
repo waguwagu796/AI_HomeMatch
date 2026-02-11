@@ -18,10 +18,10 @@ from .llm_client_groq import GroqLLMClient
 
 @dataclass(frozen=True)
 class RagParams:
-    """검색 개수 기본값은 config.RAG.top_k 사용 (단일 출처)."""
+    """검색 개수: 법령/조정은 config.RAG.top_k, 판례는 조금 더 많이 (사용성)."""
 
     top_k_law: int = RAG.top_k
-    top_k_precedent: int = RAG.top_k
+    top_k_precedent: int = 6  # 판례 컨텍스트를 조금 더 주어 인용 가능성 확대
     top_k_mediation: int = RAG.top_k
     top_n_evidence_raw: int = 6
     top_n_evidence_final: int = 1
@@ -169,19 +169,19 @@ def step_postprocess(inp: Dict[str, Any]) -> Dict[str, Any]:
     _sync_ids("laws", "law_ids")
 
     # -----------------------------
-    # 5) precedent evidence 강제
+    # 5) precedent 정규화 (evidence 없어도 summary/source_id는 유지)
     # -----------------------------
-    # evidence_paragraphs가 비어 있으면 그 판례는 제거
     precedents = obj.get("precedents", [])
     if isinstance(precedents, list):
-        cleaned: List[Dict[str, Any]] = []
+        normalized: List[Dict[str, Any]] = []
         for p in precedents:
             if not isinstance(p, dict):
                 continue
             ev = p.get("evidence_paragraphs", [])
-            if isinstance(ev, list) and len(ev) > 0:
-                cleaned.append(p)
-        obj["precedents"] = cleaned
+            if not isinstance(ev, list):
+                ev = []
+            normalized.append({**p, "evidence_paragraphs": ev})
+        obj["precedents"] = normalized
         _sync_ids("precedents", "precedent_ids")
 
     # -----------------------------

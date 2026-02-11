@@ -50,9 +50,9 @@ Use EXACT keys and types below. Do not add new keys.
 
 Rules:
 - JSON must be parseable by json.loads.
-- source_id: Every value MUST appear exactly as in the context blocks (e.g. LAW:law:13, PREC:421472, MED:mediation:7). Do NOT invent or guess IDs. If the exact id is not in the context, omit that source.
-- If the provided context is empty or insufficient for a confident conclusion, set level to SAFE or NEED_UNDERSTAND and use empty arrays [] for mediation_cases, precedents, laws and their _ids. Do not fill with invented sources.
-- precedents[].evidence_paragraphs MUST be quotes or close paraphrases from [PRECEDENT_EVIDENCE] only. If you have no such paragraph for a case, do not include that case in precedents.
+- source_id: Use only IDs that appear exactly in the context blocks (e.g. LAW:law:13, PREC:421472, MED:mediation:7). Do NOT invent IDs. When the context contains relevant laws, precedents, or mediation cases, cite them using their exact source_id so the user can look them up.
+- If the provided context is empty or has no relevant sources, set level to SAFE or NEED_UNDERSTAND and use empty arrays [] for mediation_cases, precedents, laws and their _ids. When the context does contain relevant material, include those sources (with correct source_id) rather than leaving arrays empty.
+- precedents[].evidence_paragraphs: when [PRECEDENT_EVIDENCE] has matching paragraphs, use quotes or close paraphrases from it. When there is no such paragraph for a case, you may still include that precedent with summary and source_id, and set evidence_paragraphs to [].
 - When unsure between two levels, choose the lower risk level (SAFE over NEED_UNDERSTAND, NEED_UNDERSTAND over NEED_REVIEW).
 - Limits:
   - risk_points: 0~3 items.
@@ -81,9 +81,9 @@ SYSTEM_PROMPT = """\
 
 중요 규칙:
 1) 모르는 내용은 단정하지 않고, 추측으로 근거를 만들지 않는다.
-2) 근거가 없거나 컨텍스트가 비어 있으면, level은 SAFE 또는 NEED_UNDERSTAND로 두고 결론만 짧게 쓰며, laws/precedents/mediation_cases는 반드시 빈 배열 []로 둔다.
-3) 인용·요약은 오직 제공된 [LAW], [PRECEDENT_HEADNOTE], [PRECEDENT_EVIDENCE], [MEDIATION] 블록 안의 문장만 사용한다. 컨텍스트에 없는 source_id를 절대 만들지 않는다.
-4) precedents[].evidence_paragraphs는 [PRECEDENT_EVIDENCE]에 나온 문단만 인용·요약한다. [PRECEDENT_HEADNOTE]만 보고 문단을 지어내지 않는다.
+2) 근거가 없거나 컨텍스트가 비어 있으면 level은 SAFE 또는 NEED_UNDERSTAND로 두고 빈 배열 []로 둔다. 컨텍스트에 관련 법령·판례·조정사례가 있으면 해당 source_id를 그대로 써서 인용한다.
+3) 인용·요약은 제공된 [LAW], [PRECEDENT_HEADNOTE], [PRECEDENT_EVIDENCE], [MEDIATION] 블록 안의 문장만 사용한다. source_id는 블록에 나온 ID만 그대로 쓴다.
+4) precedents[].evidence_paragraphs는 [PRECEDENT_EVIDENCE]에 나온 문단만 인용한다. 해당 문단이 없어도 판례를 참고로 넣고 싶으면 summary와 source_id만 넣고 evidence_paragraphs는 []로 둘 수 있다.
 5) 레이어 순서(법령 → 판례 → 조정사례)를 지킨다.
 6) 출력은 반드시 주어진 출력 지시(JSON 스키마)의 키와 구조를 따른다. conclusion, risk_points, recommendations는 간결하게 써서 잘림을 피한다.
 7) 응답 전체는 반드시 하나의 JSON 객체만 출력한다. JSON 앞뒤에 설명문, 요약, "level: ..." 같은 키:값 나열, 마크다운 등 어떤 추가 텍스트도 붙이지 않는다.
