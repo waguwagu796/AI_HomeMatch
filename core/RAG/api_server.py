@@ -12,6 +12,16 @@ from pydantic import BaseModel, Field
 
 app = FastAPI(title="AI_HomeMatch RAG API")
 
+
+@app.exception_handler(Exception)
+def _handle_unhandled(_request: Any, exc: Exception) -> JSONResponse:
+    """500 발생 시 실제 예외 내용을 body에 담아 반환 (원인 파악용)."""
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "type": type(exc).__name__},
+    )
+
+
 # core/register.py 를 import할 수 있도록 core 경로를 sys.path에 추가
 _CORE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _CORE_DIR not in sys.path:
@@ -41,8 +51,8 @@ def _get_chain_and_llm():
         return _chain, _llm
 
     try:
-        from langchain_step_names import build_chain  # type: ignore
-        from llm_client_groq import GroqLLMClient, GroqLLMConfig  # type: ignore
+        from .langchain_step_names import build_chain  # type: ignore
+        from .llm_client_groq import GroqLLMClient, GroqLLMConfig  # type: ignore
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"RAG 의존성 로드 실패: {e!r}")
 
@@ -143,10 +153,9 @@ def _safe_parse_json(answer_raw: str) -> Tuple[Optional[Dict[str, Any]], str]:
     return obj, cleaned
 
 
-def _parse_rag_params(rag_params: Optional[Dict[str, Any]]) -> RagParams:
+def _parse_rag_params(rag_params: Optional[Dict[str, Any]]):
     try:
-        from langchain_step_names import RagParams  # type: ignore
-
+        from .langchain_step_names import RagParams  # type: ignore
         return RagParams(**rag_params) if rag_params else RagParams()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"invalid rag_params: {e!r}")
